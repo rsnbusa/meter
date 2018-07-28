@@ -307,19 +307,19 @@ void kbd(void *arg) {
 					else
 						printf("Resource locked\n");
 				}
-
-				memset(&currentBeat,0,sizeof(currentBeat)); //counter to zero
+				memset(&theMeters,0,sizeof(theMeters));
+			//	memset(&currentBeat,0,sizeof(currentBeat)); //counter to zero
 				for (int a=0;a<MAXDEVS;a++)
 				{
 					load_from_fram(a);
-					oldTime[a]=0;
+			//		oldTime[a]=0;
 					minTime[a]=maxTime[a]=maxbeatTime[a]=0;
 					minbeatTime[a]=99999;
-					comofue[a]=0;
-					maxPower[a]=0.0;
-					msPower[a]=99999;
-					theMeters[a].beat=0;
-					theMeters[a].curBeat=0;
+		//			comofue[a]=0;
+			//		maxPower[a]=0.0;
+			//		msPower[a]=99999;
+					theMeters[a].beatSave=0;
+					theMeters[a].currentBeat=0;
 					theMeters[a].meterid=a;
 					theMeters[a].saveit=false;
 					theMeters[a].timestamp=0;
@@ -373,7 +373,7 @@ void kbd(void *arg) {
 				xSemaphoreTake(framSem, portMAX_DELAY);//portMAX_DELAY
 				fram.read_beat(add,(uint8_t*)&beat);
 				xSemaphoreGive(framSem);
-				printf("Beat[%d]=%06x-%d current=%d\n",add,beat,beat,currentBeat[add]);
+				printf("Beat[%d]=%06x-%d current=%d\n",add,beat,beat,theMeters[add].currentBeat);
 				break;
 			}
 			case 'q':
@@ -452,17 +452,17 @@ void kbd(void *arg) {
 				break;}
 			case 'c':{
 				for (int a=0;a<MAXDEVS;a++)
-					printf("C[%d]=%d ",a,currentBeat[a]);
+					printf("C[%d]=%d ",a,theMeters[a].currentBeat);
 				printf("\n");
 				for (int a=0;a<MAXDEVS;a++)
-					printf("C1[%d]=%d ",a,theMeters[a].curBeat);
+					printf("C1[%d]=%d ",a,theMeters[a].currentBeat);
 					printf("\n");
 				break;}
 			case 'z':{
-				memset(&currentBeat,0,sizeof(currentBeat));
+				memset(&theMeters,0,sizeof(theMeters));
 				for (int a=0;a<MAXDEVS;a++){
-					theMeters[a].beat=0;
-					theMeters[a].curBeat=0;
+					theMeters[a].beatSave=0;
+					theMeters[a].currentBeat=0;
 					theMeters[a].saveit=false;
 				}
 				//	count[0]=count[1]=count[2]=0;

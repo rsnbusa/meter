@@ -260,15 +260,15 @@ static void IRAM_ATTR gpio_isr_handler(void * arg)
 				meter->timestamp=millis(); //last valid isr
 		//		currentBeat[yo]++;
 		//		beatSave[yo]++;
-				meter->beat++;
-				meter->curBeat++;
-				if((meter->curBeat % GMAXLOSSPER)==0) //every GMAXLOSSPER interval
+				meter->beatSave++;
+				meter->currentBeat++;
+				if((meter->currentBeat % GMAXLOSSPER)==0) //every GMAXLOSSPER interval
 				{
-					if(meter->beat>=dia24h[horag])
+					if(meter->beatSave>=dia24h[horag])
 					{ //One kWh has occurred
 						meter->saveit=true;
-						beatSave[yo]=0;
-						meter->beat=0;
+						meter->beatSave=0;
+						//meter->beat=0;
 					}
 					else
 						meter->saveit=false;
@@ -277,10 +277,10 @@ static void IRAM_ATTR gpio_isr_handler(void * arg)
 						portYIELD_FROM_ISR();
 				}
 				meter->msNow=fueron;
-				if(fueron<meter->msMin)
-					meter->msMin=fueron;
-				if(fueron>meter->msMax)
-					meter->msMax=fueron;
+				if(fueron<meter->minamps)
+					meter->minamps=fueron;
+				if(fueron>meter->maxamps)
+					meter->maxamps=fueron;
 
 		     }
 		}
@@ -323,7 +323,7 @@ void interruptTask(void* pvParameter)
 		theMeters[a].meterid=a;
 		theMeters[a].elpin=METERS[a];
 		theMeters[a].state=1;
-		theMeters[a].msMin=0xffffffff;
+		theMeters[a].minamps=0xffffffff;
 		io_conf.pin_bit_mask = (mask<<METERS[a]);
 		gpio_config(&io_conf);
 		gpio_isr_handler_add((gpio_num_t)METERS[a], gpio_isr_handler,(void*)&theMeters[a]);
@@ -344,11 +344,11 @@ void interruptTask(void* pvParameter)
 		{
 			if(xSemaphoreTake(framSem, portMAX_DELAY))  //reserve FRAM
 			{
-				fram.write_beat(soyYo.meterid,soyYo.curBeat);
+				fram.write_beat(soyYo.meterid,soyYo.currentBeat);
 #ifdef DEBUGMQQT
 
 				if(aqui.traceflag & (1<<INTD))
-					printf("[INTD]Meter %d curBeat %d\n",soyYo.meterid,soyYo.curBeat);
+					printf("[INTD]Meter %d curBeat %d\n",soyYo.meterid,soyYo.currentBeat);
 #endif
 				if(soyYo.saveit) //One kWh has occurred
 					write_to_fram(soyYo.meterid,true); // last saved beat count
@@ -1215,12 +1215,12 @@ void init_fram()
 		for (int a=0;a<MAXDEVS;a++)
 		{
 			load_from_fram(a);
-			oldTime[a]=0;
-			minTime[a]=maxTime[a]=maxbeatTime[a]=0;
-			minbeatTime[a]=99999;
-			comofue[a]=0;
-			maxPower[a]=0.0;
-			msPower[a]=99999;
+	//		oldTime[a]=0;
+	//		minTime[a]=maxTime[a]=maxbeatTime[a]=0;
+	//		minbeatTime[a]=99999;
+	//		comofue[a]=0;
+	//		maxPower[a]=0.0;
+	//		msPower[a]=99999;
 		}
 		if(xSemaphoreTake(framSem, 1000))
 		{

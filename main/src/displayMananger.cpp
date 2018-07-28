@@ -23,11 +23,12 @@ void sendBill(void *pArg)
 
 	time_t ll;
 	time(&ll);
-	u16 n=sprintf(textll,"%s!%d!%s!%d!%d",aqui.medidor_id[billsendmeter],curCycle[billsendmeter],makeDateString(ll).c_str(),curLife[billsendmeter],currentBeat[billsendmeter]);
+	u16 n=sprintf(textll,"%s!%d!%s!%d!%d",aqui.medidor_id[billsendmeter],theMeters[billsendmeter].curCycle,makeDateString(ll).c_str(),
+			theMeters[billsendmeter].curLife,theMeters[billsendmeter].currentBeat);
 	//     PRINT_MSG("%s\n",textll);
 	//    mlog(GENERAL, "BILL "+String(textl));
 	//    fram.write_cycle(billsendmeter, oldMesg, curCycle[billsendmeter]);
-	curCycle[billsendmeter]=0;
+	theMeters[billsendmeter].curCycle=0;
 	aqui.corteSent[billsendmeter]=true;
 	//   fram.write_cycledate(billsendmeter, oldMesg, ll);
 
@@ -96,9 +97,9 @@ void setCycleChange(u8 diaHoy, u8 oldDia)
 					//     delay(ran);
 					//     send_bill(a,ran);
 					//     delay(ran+100); //in case we have more than 1 meter needing to send
-					curCycle[a]=0; //reset to 0 ram variable
+					theMeters[a].curCycle=0; //reset to 0 ram variable
 				}
-				cycleMonth[a]=mesg;
+				theMeters[a].cycleMonth=mesg;
 			}
 			else
 				if(aqui.corteSent[a])
@@ -111,7 +112,7 @@ void setCycleChange(u8 diaHoy, u8 oldDia)
 		else
 			// change cycleMonth
 			// to mesg+1 if is Greater than, which means month has not chenage yet
-			cycleMonth[a]=mesg+1;
+			theMeters[a].cycleMonth=mesg+1;
 	}
 }
 void check_date_change()
@@ -146,11 +147,11 @@ void check_date_change()
 
 			if(xSemaphoreTake(framSem, 1000))
 			{
-				fram.write_hour(a, yearg,oldMesg,oldDiag,oldHorag, curHour[a]);//write old one before init new
+				fram.write_hour(a, yearg,oldMesg,oldDiag,oldHorag, theMeters[a].curHour);//write old one before init new
 				xSemaphoreGive(framSem);
 			}
 
-			curHour[a]=0; //init it
+			theMeters[a].curHour=0; //init it
 			u16 oldt=tarifaBPK[oldHorag];
 			if (diag !=oldDiag)
 				loadDayBPK(diag); // load new day values for Tariffs
@@ -158,8 +159,8 @@ void check_date_change()
 			if(oldt!=tarifaBPK[horag])
 			{
 				// different BPH. Calculate currentBeat[a]/dia24h[oldhorag]
-				float perc=currentBeat[a]/dia24h[oldHorag];
-				currentBeat[a]=(int)(perc*(float)dia24h[horag]);
+				float perc=theMeters[a].currentBeat/dia24h[oldHorag];
+				theMeters[a].currentBeat=(int)(perc*(float)dia24h[horag]);
 			} //else keep counting in the same currentBeat
 			oldHorag=horag;
 		}
@@ -177,8 +178,8 @@ void check_date_change()
 #endif
 			if(xSemaphoreTake(framSem, 1000))
 			{
-				fram. write_day(a,yearg, oldMesg,oldDiag, curDay[a]);
-				curDay[a]=0;
+				fram. write_day(a,yearg, oldMesg,oldDiag, theMeters[a].curDay);
+				theMeters[a].curDay=0;
 				xSemaphoreGive(framSem);
 			}
 
@@ -193,9 +194,9 @@ void check_date_change()
 		{
 			if(xSemaphoreTake(framSem, 1000))
 			{
-				fram.write_month(a, oldMesg, curMonth[a]);
+				fram.write_month(a, oldMesg, theMeters[a].curMonth);
 				xSemaphoreGive(framSem);
-				curMonth[a]=0;
+				theMeters[a].curMonth=0;
 			}
 		}
 		oldMesg=mesg;
@@ -308,11 +309,11 @@ void showKwh(u8 meter)
 	drawString(64,0," KWH",24, TEXT_ALIGN_CENTER,NODISPLAY, NOREP);
 	sprintf(local,"M%d",chosenMeter);
 	drawString(22,0, string(local),10, TEXT_ALIGN_LEFT,NODISPLAY, NOREP);
-	sprintf(local,"%d",curLife[meter]);
+	sprintf(local,"%d",theMeters[meter].curLife);
 
 	drawString(64, 24, string(local), 24, TEXT_ALIGN_CENTER,NODISPLAY, NOREP);
 
-	sprintf(local,"%s >> %d",meses[mesg],curMonth[meter]);
+	sprintf(local,"%s >> %d",meses[mesg],theMeters[meter].curMonth);
 	drawString(64, 48, local, 16, TEXT_ALIGN_CENTER,NODISPLAY, NOREP);
 	drawBars();
 }
@@ -329,7 +330,7 @@ void drawPulses(int meter)
 	drawString(102, 0, string(textl), 10, TEXT_ALIGN_LEFT, NODISPLAY, NOREP);
 	sprintf(textl,"%d",meter);
 	drawString(102, 16, "M"+string(textl), 10, TEXT_ALIGN_LEFT, NODISPLAY, NOREP);
-	sprintf(textl,"%d",currentBeat[meter]);
+	sprintf(textl,"%d",theMeters[meter].currentBeat);
 	drawString(64, 28, string(textl),16, TEXT_ALIGN_CENTER,NODISPLAY, REPLACE);
 	drawBars();
 	if (mqttf)
@@ -466,11 +467,11 @@ void displayData(u8 meter)
 
 		if(aqui.MODDISPLAY[meter]>100 || aqui.MODDISPLAY[meter]==0)
 			aqui.MODDISPLAY[meter]=5;
-		if(currentBeat[meter]-oldbeat[meter]>=aqui.MODDISPLAY[meter])
+		if(theMeters[meter].currentBeat-theMeters[meter].oldbeat>=aqui.MODDISPLAY[meter])
 	//	if((currentBeat[meter] % aqui.MODDISPLAY[meter])==0)
 
 		{
-					oldbeat[meter]=currentBeat[meter];
+					theMeters[meter].oldbeat=theMeters[meter].currentBeat;
 			/*
                 	if((float)prevBeat[meter]>0.0)
                 		amps=4500.0/float(prevBeat[meter]);
@@ -485,7 +486,7 @@ void displayData(u8 meter)
                     //   minampsDate[meter]=rtc.now();
                    }
 			 */
-			sprintf(local,"%d",currentBeat[meter]);
+			sprintf(local,"%d",theMeters[meter].currentBeat);
 			drawString(64, 28, string(local),16, TEXT_ALIGN_CENTER,DISPLAYIT, REPLACE);
 	//		time(&now);
 	//		s2=makeDateString(now);
@@ -498,16 +499,16 @@ void displayData(u8 meter)
 	case DISPLAYKWH:
 		if(aqui.MODDISPLAY[meter]>100 || aqui.MODDISPLAY[meter]==0)
 			aqui.MODDISPLAY[meter]=5;
-		if(currentBeat[meter]-oldbeat[meter]>=aqui.MODDISPLAY[meter])
+		if(theMeters[meter].currentBeat-theMeters[meter].oldbeat>=aqui.MODDISPLAY[meter])
 		{
-			oldbeat[meter]=currentBeat[meter];
-			sprintf(local,"%d",curLife[meter]);
+			theMeters[meter].oldbeat=theMeters[meter].currentBeat;
+			sprintf(local,"%d",theMeters[meter].curLife);
 			s1=string(local);
 			drawString(64, 24,s1, 24, TEXT_ALIGN_CENTER,DISPLAYIT, REPLACE);
-			sprintf(local," %4d",beatSave[meter]);
+			sprintf(local," %4d",theMeters[meter].beatSave);
 			s1=string(local);
 			drawString(128, 0, s1, 10, TEXT_ALIGN_RIGHT,DISPLAYIT, REPLACE);
-			sprintf(local,"%s >> %d",meses[mesg],curMonth[meter]);
+			sprintf(local,"%s >> %d",meses[mesg],theMeters[mesg].curMonth);
 			s1=string(local);
 			drawString(64, 48, s1, 16, TEXT_ALIGN_CENTER,DISPLAYIT, REPLACE);
 			s1="";

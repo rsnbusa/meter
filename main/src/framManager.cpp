@@ -60,7 +60,7 @@ void write_to_fram(u8 meter,bool adding)
 //		curCycle[meter]++; // Corte a Corte counter
 //		curCycle[meter]++; // Corte a Corte counter ??? twice???
 		// lastBeatDate[meter]=now();
-		fram.write_lifedate(meter,lastBeatDate[meter]);  //should be down after scratch record???
+		fram.write_lifedate(meter,theMeters[meter].lastBeatDate);  //should be down after scratch record???
 	}
 	scratch.medidor.state=1;                    //scratch written
 	scratch.medidor.meter=meter;
@@ -89,15 +89,15 @@ void write_to_fram(u8 meter,bool adding)
 //	fram.write_minamps(meter,minamps[meter]);
 //	fram.write_maxamps(meter,maxamps[meter]);
 
-	fram.write_beat(meter,theMeters[meter].curBeat);
+	fram.write_beat(meter,theMeters[meter].currentBeat);
 	fram.write_lifekwh(meter,theMeters[meter].curLife);
 	fram.write_month(meter,mesg,theMeters[meter].curMonth);
 	fram.write_day(meter,yearg,mesg,diag,theMeters[meter].curDay);
 	fram.write_hour(meter,yearg,mesg,diag,horag,theMeters[meter].curHour);
 	//  fram.write_cycle(meter, mesg,curCycle[meter]);
-	fram.write_cycle(meter, cycleMonth[meter],theMeters[meter].curCycle);
-	fram.write_minamps(meter,theMeters[meter].msMin);
-	fram.write_maxamps(meter,theMeters[meter].msMax);
+	fram.write_cycle(meter, theMeters[meter].cycleMonth,theMeters[meter].curCycle);
+	fram.write_minamps(meter,theMeters[meter].minamps);
+	fram.write_maxamps(meter,theMeters[meter].maxamps);
 
 
 	scratch.medidor.state=2;            //variables written state
@@ -116,14 +116,14 @@ void load_from_fram(u8 meter)
 		fram.read_day(meter, yearg,mesg, diag, (u8*)&theMeters[meter].curDay);
 		fram.read_hour(meter, yearg,mesg, diag, horag, (u8*)&theMeters[meter].curHour);
 		fram.read_cycle(meter, mesg, (u8*)&theMeters[meter].curCycle); //should we change this here too and use cycleMonth[meter]?????
-		fram.read_beat(meter,(u8*)&theMeters[meter].curBeat);
-		oldbeat[meter]=theMeters[meter].curBeat;
+		fram.read_beat(meter,(u8*)&theMeters[meter].currentBeat);
+		theMeters[meter].oldbeat=theMeters[meter].currentBeat;
 		if(aqui.beatsPerKw[meter]==0)
 			aqui.beatsPerKw[meter]=800;// just in case div by 0 crash
-		u16 nada=theMeters[meter].curBeat/aqui.beatsPerKw[meter];
-		beatSave[meter]=theMeters[meter].curBeat-(nada*aqui.beatsPerKw[meter]);
-		fram.read_minamps(meter,(u8*)&theMeters[meter].msMin);
-		fram.read_maxamps(meter,(u8*)&theMeters[meter].msMax);
+		u16 nada=theMeters[meter].currentBeat/aqui.beatsPerKw[meter];
+		theMeters[meter].beatSave=theMeters[meter].currentBeat-(nada*aqui.beatsPerKw[meter]);
+		fram.read_minamps(meter,(u8*)&theMeters[meter].minamps);
+		fram.read_maxamps(meter,(u8*)&theMeters[meter].maxamps);
 
 //		fram.read_lifekwh(meter,(u8*)&curLife[meter]);
 //				fram.read_lifedate(meter,(u8*)&lastBeatDate[meter]);

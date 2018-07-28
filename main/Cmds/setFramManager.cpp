@@ -56,7 +56,7 @@ void set_framManager(void * pArg){
 //				theMeters[a].meterid=a;
 //				theMeters[a].saveit=false;
 //				theMeters[a].timestamp=0;
-				theMeters[a].msMin=0xffffffff;
+				theMeters[a].minamps=0xffffffff;
 			}
 		}
 		goto sale;

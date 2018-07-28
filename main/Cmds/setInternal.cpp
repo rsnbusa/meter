@@ -134,19 +134,19 @@ void set_internal(void * pArg){
 				printf("done\n");
 				//reset general counters
 
-				curLife[meter]=aqui.bornKwh[meter];
-				curMonth[meter]=0;
-				curDay[meter]=0;
-				curHour[meter]=0;
-				beatSave[meter]=0;
-				maxamps[meter]=0;
-				lastBeatDate[meter]=0;
-				minamps[meter]=9999;
-				currentBeat[meter]=0;
-				oldbeat[meter]=currentBeat[meter];
+				theMeters[meter].curLife=aqui.bornKwh[meter];
+				theMeters[meter].curMonth=0;
+				theMeters[meter].curDay=0;
+				theMeters[meter].curHour=0;
+				theMeters[meter].beatSave=0;
+				theMeters[meter].maxamps=0;
+				theMeters[meter].lastBeatDate=0;
+				theMeters[meter].minamps=9999;
+				theMeters[meter].currentBeat=0;
+				theMeters[meter].oldbeat=theMeters[meter].currentBeat;
 				xSemaphoreTake(framSem, portMAX_DELAY);//portMAX_DELAY
-				fram.write_minamps(meter,minamps[meter]);
-				fram.write_beat(meter,currentBeat[meter]);
+				fram.write_minamps(meter,theMeters[meter].minamps);
+				fram.write_beat(meter,theMeters[meter].currentBeat);
 				fram.write_lifekwh(meter,aqui.bornKwh[meter
 													  ]);
 				xSemaphoreGive(framSem);

@@ -34,9 +34,10 @@ void set_statusSend(void * pArg){
 	char *mensaje=asctime(&timeptr);
 	int son=strlen(mensaje);
 	mensaje[son-1]=0;
-	sprintf(textl,"%d!%d!%d!%d!%d!%d!%d!%s!%s!%d!%d!%d!%s!%d!%d!%d!", currentBeat[cualmeter],curLife[cualmeter],curMonth[cualmeter],curDay[cualmeter],curHour[cualmeter],
-			curCycle[cualmeter],dia24h[horag],mensaje,aqui.medidor_id[cualmeter],aqui.breakers[cualmeter],(int)mxpow
-			,msPower[cualmeter]," ",msNow[cualmeter],beatSave[cualmeter],aqui.diaDeCorte[cualmeter]);
+	sprintf(textl,"%d!%d!%d!%d!%d!%d!%d!%s!%s!%d!%d!%d!%s!%d!%d!%d!", theMeters[cualmeter].currentBeat,theMeters[cualmeter].curLife,theMeters[cualmeter].curMonth,
+			theMeters[cualmeter].curDay,theMeters[cualmeter].curHour,
+			theMeters[cualmeter].curCycle,dia24h[horag],mensaje,aqui.medidor_id[cualmeter],aqui.breakers[cualmeter],(int)mxpow
+			,theMeters[cualmeter].maxamps," ",theMeters[cualmeter].msNow,theMeters[cualmeter].beatSave,aqui.diaDeCorte[cualmeter]);
 	webString=string(textl);
 	sendResponse( argument->pComm,argument->typeMsg, webString,webString.length(),NOERROR,false,false);            // send to someones browser when asked
 #ifdef DEBUGMQQT
