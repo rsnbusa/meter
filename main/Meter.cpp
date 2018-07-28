@@ -258,8 +258,8 @@ static void IRAM_ATTR gpio_isr_handler(void * arg)
 		     {
 				meter->state=0;
 				meter->timestamp=millis(); //last valid isr
-				currentBeat[yo]++;
-				beatSave[yo]++;
+		//		currentBeat[yo]++;
+		//		beatSave[yo]++;
 				meter->beat++;
 				meter->curBeat++;
 				if((meter->curBeat % GMAXLOSSPER)==0) //every GMAXLOSSPER interval

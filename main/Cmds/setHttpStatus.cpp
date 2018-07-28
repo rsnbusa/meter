@@ -100,7 +100,7 @@ void set_HttpStatus(void * pArg){
 		}
 		sprintf(textl,"Meter[%d]=%s<br>",meter,aqui.medidor_id[meter]);
 		finalStr+=string(textl);
-		sprintf(textl,"LifetBeat[%d]-[%d] last %s<br>",ll,currentBeat[meter],makeDateString(lastBeatDate[meter]).c_str());
+		sprintf(textl,"LifetBeat[%d]-[%d] last %s<br>",ll,theMeters[meter].curBeat,makeDateString(theMeters[meter].lastBeatDate).c_str());
 		finalStr+=string(textl);
 		sprintf(textl,"LifeKWH[%d] Month[%d]=%d Day[%d]=%d Hour[%d]=%d Beats<br>",curLife[meter],mesg,curMonth[meter],diag,curDay[meter],horag,curHour[meter]);
 		finalStr+=string(textl);

@@ -40,21 +40,23 @@ void set_framManager(void * pArg){
 		{
 			sprintf(textl,"FRAM Formatted");
 			postLog(FRAMFL,0,string(textl));
-			memset(&currentBeat,0,sizeof(currentBeat)); //counter to zero
+		//	memset(&currentBeat,0,sizeof(currentBeat)); //counter to zero
+			memset(&theMeters,0,sizeof(theMeters)); //counter to zero
 			for (int a=0;a<MAXDEVS;a++)
 			{
-				load_from_fram(a);
-				oldTime[a]=0;
-				minTime[a]=maxTime[a]=maxbeatTime[a]=0;
-				minbeatTime[a]=99999;
-				comofue[a]=0;
-				maxPower[a]=0.0;
-				msPower[a]=99999;
-				theMeters[a].beat=0;
-				theMeters[a].curBeat=0;
-				theMeters[a].meterid=a;
-				theMeters[a].saveit=false;
-				theMeters[a].timestamp=0;
+				load_from_fram(a); //why they are in zero everything
+//				oldTime[a]=0;
+//				minTime[a]=maxTime[a]=maxbeatTime[a]=0;
+//				minbeatTime[a]=99999;
+//				comofue[a]=0;
+//				maxPower[a]=0.0;
+//				msPower[a]=99999;
+//				theMeters[a].beat=0;
+//				theMeters[a].curBeat=0;
+//				theMeters[a].meterid=a;
+//				theMeters[a].saveit=false;
+//				theMeters[a].timestamp=0;
+				theMeters[a].msMin=0xffffffff;
 			}
 		}
 		goto sale;
