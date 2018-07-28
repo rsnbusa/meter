@@ -143,11 +143,12 @@ void set_internal(void * pArg){
 				lastBeatDate[meter]=0;
 				minamps[meter]=9999;
 				currentBeat[meter]=0;
-				oldBeat[meter]=currentBeat[meter];
+				oldbeat[meter]=currentBeat[meter];
 				xSemaphoreTake(framSem, portMAX_DELAY);//portMAX_DELAY
 				fram.write_minamps(meter,minamps[meter]);
 				fram.write_beat(meter,currentBeat[meter]);
-				fram.write_lifekwh(meter,aqui.bornKwh[meter]);
+				fram.write_lifekwh(meter,aqui.bornKwh[meter
+													  ]);
 				xSemaphoreGive(framSem);
 
 			}

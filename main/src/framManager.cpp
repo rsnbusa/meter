@@ -94,7 +94,7 @@ void load_from_fram(u8 meter)
 		fram.read_hour(meter, yearg,mesg, diag, horag, (u8*)&curHour[meter]);
 		fram.read_cycle(meter, mesg, (u8*)&curCycle[meter]); //should we change this here too and use cycleMonth[meter]?????
 		fram.read_beat(meter,(u8*)&currentBeat[meter]);
-		oldBeat[meter]=currentBeat[meter];
+		oldbeat[meter]=currentBeat[meter];
 		if(aqui.beatsPerKw[meter]==0)
 			aqui.beatsPerKw[meter]=800;// just in case div by 0 crash
 		u16 nada=currentBeat[meter]/aqui.beatsPerKw[meter];
