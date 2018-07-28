@@ -241,7 +241,7 @@ void sendResponse( void * comm,int msgTipo,string que,int len,int code,bool with
 		nc->flags |= MG_F_SEND_AND_CLOSE;
 	}
 }
-//bullshit git info
+
 
 static void IRAM_ATTR gpio_isr_handler(void * arg)
 {
