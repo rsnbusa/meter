@@ -318,10 +318,11 @@ void kbd(void *arg) {
 					comofue[a]=0;
 					maxPower[a]=0.0;
 					msPower[a]=99999;
-					quien[a].fcount=0;
-					quien[a].beatc=0;
-					quien[a].portid=a;
-					quien[a].fullkwh=0;
+					theMeters[a].beat=0;
+					theMeters[a].curBeat=0;
+					theMeters[a].meterid=a;
+					theMeters[a].saveit=false;
+					theMeters[a].timestamp=0;
 				}
 
 				break;
@@ -454,15 +455,15 @@ void kbd(void *arg) {
 					printf("C[%d]=%d ",a,currentBeat[a]);
 				printf("\n");
 				for (int a=0;a<MAXDEVS;a++)
-					printf("C1[%d]=%d ",a,quien[a].fcount);
+					printf("C1[%d]=%d ",a,theMeters[a].curBeat);
 					printf("\n");
 				break;}
 			case 'z':{
 				memset(&currentBeat,0,sizeof(currentBeat));
 				for (int a=0;a<MAXDEVS;a++){
-					quien[a].fcount=0;
-					quien[a].beatc=0;
-					quien[a].fullkwh=0;
+					theMeters[a].beat=0;
+					theMeters[a].curBeat=0;
+					theMeters[a].saveit=false;
 				}
 				//	count[0]=count[1]=count[2]=0;
 				break;}

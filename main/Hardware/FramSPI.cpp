@@ -10,7 +10,7 @@ extern uint8_t *bbuffer;
 extern void delay(uint16_t a);
 //extern SemaphoreHandle_t *framSem;
 
-
+#define DEBUGMQQT
 /*========================================================================*/
 /*                            CONSTRUCTORS                                */
 /*========================================================================*/
@@ -101,7 +101,6 @@ bool FramSPI::begin(int MOSI, int MISO, int CLK, int CS,SemaphoreHandle_t *framS
 	buscfg.sclk_io_num=CLK;
 	buscfg.quadwp_io_num=-1;
 	buscfg .quadhd_io_num=-1;
-
 	//Initialize the SPI bus
 	ret=spi_bus_initialize(VSPI_HOST, &buscfg, 0);
 	assert(ret == ESP_OK);
@@ -130,14 +129,11 @@ bool FramSPI::begin(int MOSI, int MISO, int CLK, int CS,SemaphoreHandle_t *framS
 		getDeviceID(&manufID, &prod);
 		if (manufID != 0x47f)
 			//{
-			ESP_LOGI(TAG , "failed %d",manufID);
+			printf("failed %d\n",manufID);
 		//  return false;
 		//}
-		ESP_LOGI(TAG ,"Product %x",prod);
-#ifdef DEBUGMQQT
-    	if(aqui.traceflag & (1<<BOOTD))
-		printf("[BOOTD]Fram product %x\n",prod);
-#endif
+		printf("Fram Product %x\n",prod);
+
 		//Set write enable after chip is identified
 		switch(prod)
 		{
@@ -156,6 +152,10 @@ bool FramSPI::begin(int MOSI, int MISO, int CLK, int CS,SemaphoreHandle_t *framS
 		case 0x2703:
 			addressBytes=3;
 			intframWords=131072;
+			break;
+		case 0x2803:
+			addressBytes=3;
+			intframWords=262144;
 			break;
 		default:
 			addressBytes=2;

@@ -50,10 +50,11 @@ void set_framManager(void * pArg){
 				comofue[a]=0;
 				maxPower[a]=0.0;
 				msPower[a]=99999;
-				quien[a].fcount=0;
-				quien[a].beatc=0;
-				quien[a].portid=a;
-				quien[a].fullkwh=0;
+				theMeters[a].beat=0;
+				theMeters[a].curBeat=0;
+				theMeters[a].meterid=a;
+				theMeters[a].saveit=false;
+				theMeters[a].timestamp=0;
 			}
 		}
 		goto sale;

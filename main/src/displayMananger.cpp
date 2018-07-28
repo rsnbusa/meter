@@ -525,7 +525,9 @@ void displayManager(void *arg) {
 	if (aqui.DISPTIME==0)
 		aqui.DISPTIME=DISPMNGR;
 	while (true) {
-		if(aqui.pollGroup)
+	//	if(aqui.pollGroup)
+			if(1)
+
 		{
 			if(xSemaphoreTake(I2CSem, portMAX_DELAY)) //
 			{
@@ -533,7 +535,7 @@ void displayManager(void *arg) {
 				xSemaphoreGive(I2CSem);
 			}
 		}
-		vTaskDelay(100/portTICK_PERIOD_MS);
+		vTaskDelay(200/portTICK_PERIOD_MS);
 	}
 }
 

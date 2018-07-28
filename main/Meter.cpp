@@ -245,40 +245,63 @@ void sendResponse( void * comm,int msgTipo,string que,int len,int code,bool with
 
 static void IRAM_ATTR gpio_isr_handler(void * arg)
 {
-	uint32_t yo=(uint32_t)arg;
+	meterType *meter=(meterType*)arg;
+	u8 yo=meter->meterid;
 	BaseType_t tasker=false;
-//	mcount[yo]++;
-	currentBeat[yo]++;
-	beatSave[yo]++;
-	if((currentBeat[yo] % GMAXLOSSPER)==0) //every GMAXLOSSPER interval
-		xQueueSendFromISR( isrQ, &yo,( TickType_t ) 0 );
-	if (tasker) portYIELD_FROM_ISR();
+	u32 fueron;
+
+//	if(!gpio_get_level((gpio_num_t)meter->elpin) && meter->state)
+		if(!gpio_get_level((gpio_num_t)meter->elpin) )
+	{
+		fueron=millis()-meter->timestamp;
+		 if(fueron>MINBEAT)
+		     {
+				meter->state=0;
+				meter->timestamp=millis(); //last valid isr
+				currentBeat[yo]++;
+				beatSave[yo]++;
+				meter->beat++;
+				meter->curBeat++;
+				if((meter->curBeat % GMAXLOSSPER)==0) //every GMAXLOSSPER interval
+				{
+					if(meter->beat>=dia24h[horag])
+					{ //One kWh has occurred
+						meter->saveit=true;
+						beatSave[yo]=0;
+						meter->beat=0;
+					}
+					else
+						meter->saveit=false;
+					xQueueSendFromISR( isrQ,arg,( TickType_t ) 0 );
+					if (tasker)
+						portYIELD_FROM_ISR();
+				}
+				meter->msNow=fueron;
+				if(fueron<meter->msMin)
+					meter->msMin=fueron;
+				if(fueron>meter->msMax)
+					meter->msMax=fueron;
+
+		     }
+		}
+//	  else //Save the current state of the Pin
+//	  {
+//		//    meter->state=1;
+//		    meter->state=gpio_get_level((gpio_num_t)meter->elpin);
+//	  }
 }
 
 void interruptTask(void* pvParameter)
 {
 	uint64_t mask=1;
 	uint32_t aca;
-	u32  soyYo;
+	meterType soyYo;
 	//set Breaker Pin Output
 	//	printf("Breaker for int %d, inter Pin %d and relaypin %d is %s Mutex %p horag %d\n",yo,interruptPin,relayPin,aqui.breakers[yo]?"On":"Off",arg->mimutex,horag);
 //	gpio_set_direction((gpio_num_t)relayPin, GPIO_MODE_OUTPUT);
 //	gpio_set_level((gpio_num_t)relayPin, aqui.breakers[yo]); // Inverse since its a Normally Closed Relays strategy
 
-	gpio_config_t io_conf;
-	io_conf.intr_type = GPIO_INTR_NEGEDGE;
-	io_conf.mode = GPIO_MODE_INPUT;
-	io_conf.pull_down_en =GPIO_PULLDOWN_DISABLE;
-	io_conf.pull_up_en =GPIO_PULLUP_ENABLE;
-
-	for (int a=0;a<4;a++)
-	{
-		io_conf.pin_bit_mask = (mask<<METERS[a]);
-		gpio_config(&io_conf);
-		gpio_isr_handler_add((gpio_num_t)METERS[a], gpio_isr_handler,(void*)a);
-	}
-
-	isrQ = xQueueCreate( 100, sizeof( aca ) );
+	isrQ = xQueueCreate( 100, sizeof( meterType ) );
 
 	if(!isrQ)
 	{
@@ -287,24 +310,48 @@ void interruptTask(void* pvParameter)
 			delay(100);
 	}
 
+	gpio_config_t io_conf;
+	io_conf.intr_type = GPIO_INTR_NEGEDGE;
+	io_conf.mode = GPIO_MODE_INPUT;
+	io_conf.pull_down_en =GPIO_PULLDOWN_DISABLE;
+	io_conf.pull_up_en =GPIO_PULLUP_ENABLE;
+
+	memset((void*)theMeters,0,sizeof(theMeters));
+
+	for (int a=0;a<MAXDEVS;a++)
+	{
+		theMeters[a].meterid=a;
+		theMeters[a].elpin=METERS[a];
+		theMeters[a].state=1;
+		theMeters[a].msMin=0xffffffff;
+		io_conf.pin_bit_mask = (mask<<METERS[a]);
+		gpio_config(&io_conf);
+		gpio_isr_handler_add((gpio_num_t)METERS[a], gpio_isr_handler,(void*)&theMeters[a]);
+	}
+
+		io_conf.intr_type = GPIO_INTR_DISABLE;
+		io_conf.mode = GPIO_MODE_OUTPUT;
+		io_conf.pull_down_en =GPIO_PULLDOWN_DISABLE;
+		io_conf.pull_up_en =GPIO_PULLUP_DISABLE;
+		io_conf.pin_bit_mask = (mask<<WIFILED);
+		gpio_config(&io_conf);
+		io_conf.pin_bit_mask = (mask<<MQTTLED);
+		gpio_config(&io_conf);
+
 
 	while(1){
 		if( xQueueReceive( isrQ, &soyYo, portMAX_DELAY ))
 		{
-		//	soyYo=aca;
-			if(xSemaphoreTake(framSem, 10))  //reserve FRAM
+			if(xSemaphoreTake(framSem, portMAX_DELAY))  //reserve FRAM
 			{
-				fram.write_beat(soyYo,currentBeat[soyYo]);
+				fram.write_beat(soyYo.meterid,soyYo.curBeat);
 #ifdef DEBUGMQQT
 
 				if(aqui.traceflag & (1<<INTD))
-					printf("[INTD]Meter %d curBeat %d\n",soyYo,currentBeat[soyYo]);
+					printf("[INTD]Meter %d curBeat %d\n",soyYo.meterid,soyYo.curBeat);
 #endif
-				if(beatSave[soyYo]>=dia24h[horag]) //One kWh has occurred
-				{
-					beatSave[soyYo]=0;
-					write_to_fram(soyYo,true); // last saved beat count
-				}
+				if(soyYo.saveit) //One kWh has occurred
+					write_to_fram(soyYo.meterid,true); // last saved beat count
 
 				xSemaphoreGive(framSem); //free FRAM reserve
 			}
@@ -377,7 +424,7 @@ esp_err_t mqtt_event_handler(esp_mqtt_event_handle_t event)
         case MQTT_EVENT_CONNECTED:
             if(client==clientCloud){
             	esp_mqtt_client_subscribe(client, cmdTopic.c_str(), 0);
-        	//	gpio_set_level((gpio_num_t)MQTTLED, 1);
+        		gpio_set_level((gpio_num_t)MQTTLED, 1);
             }
             else
         		mqttThingf=true;
@@ -400,7 +447,7 @@ esp_err_t mqtt_event_handler(esp_mqtt_event_handle_t event)
 
 #endif
         	if(client==clientCloud){
-        	//	gpio_set_level((gpio_num_t)MQTTLED, 0);
+        		gpio_set_level((gpio_num_t)MQTTLED, 0);
         		mqttf=false;
         	}
         	else
@@ -631,6 +678,12 @@ void initialize_sntp(void *args)
 		printf("[BOOTD]Internet Time %04d/%02d/%02d %02d:%02d:%02d YDays %d DoW:%d\n",1900+timeinfo.tm_year,timeinfo.tm_mon,timeinfo.tm_mday,
 			timeinfo.tm_hour,timeinfo.tm_min,timeinfo.tm_sec,timeinfo.tm_yday,timeinfo.tm_wday);
 #endif
+	mesg=timeinfo.tm_mon-1;
+	diag=timeinfo.tm_mday-1;
+	horag=timeinfo.tm_hour;
+	yearg=timeinfo.tm_year+1900;
+
+	rtc.setEpoch(now);
 //	gdayOfWeek=timeinfo.tm_wday;
 //	printf("Magic Number: %ld Day:%d\n",magicNumber,gdayOfWeek); //Should be 946702800
 
@@ -673,8 +726,8 @@ void newSSID(void *pArg)
 
 	if(xSemaphoreTake(I2CSem, portMAX_DELAY))
 		{
-			drawString(64,42,"               ",10,TEXT_ALIGN_CENTER,DISPLAYIT,REPLACE);
-			drawString(64,42,string(aqui.ssid[curSSID]),10,TEXT_ALIGN_CENTER,DISPLAYIT,REPLACE);
+			drawString(64,34,"               ",10,TEXT_ALIGN_CENTER,DISPLAYIT,REPLACE);
+			drawString(64,34,string(aqui.ssid[curSSID]),10,TEXT_ALIGN_CENTER,DISPLAYIT,REPLACE);
 			xSemaphoreGive(I2CSem);
 		}
 #ifdef DEBUGMQQT
@@ -748,7 +801,7 @@ esp_err_t wifi_event_handler(void *ctx, system_event_t *event) {
 		{
 			if(I2CSem)
 			{
-				if(xSemaphoreTake(I2CSem, 1000))
+				if(xSemaphoreTake(I2CSem, portMAX_DELAY))
 				{
 					setLogo("MeterIoT");
 					xSemaphoreGive(I2CSem);
@@ -1015,6 +1068,7 @@ void initVars()
 	strcpy((char*)cmds[27].comando,"/mt_scan");				cmds[27].code=set_scanCmd;				//done
 	strcpy((char*)cmds[28].comando,"/mt_clearlog");			cmds[28].code=set_clearLog;				//done
 	strcpy((char*)cmds[29].comando,"/mt_readlog");			cmds[29].code=set_readlog;				//done
+	strcpy((char*)cmds[30].comando,"/mt_session");			cmds[30].code=set_session;				//done
 
 	METERS[0]=METER1;
 	METERS[1]=METER2;
@@ -1134,11 +1188,10 @@ void loadDayBPK(u16 hoy)
 void init_fram()
 {
 	scratchTypespi scratch;
-
 	// FRAM Setup
 	fram.begin(FMOSI,FMISO,FCLK,FCS,&framSem); //will create SPI channel and Semaphore
 	framWords=fram.intframWords;
-	spi_flash_init();
+//	spi_flash_init();
 
 
 	if(1)
@@ -1188,7 +1241,7 @@ void initRtc()
 	DateTime algo;
 
 	rtc.begin(i2cp.i2cport);		// RTC
-	if(xSemaphoreTake(I2CSem, 1000))
+	if(xSemaphoreTake(I2CSem, portMAX_DELAY))
 	{
 		algo=rtc.now();
 		xSemaphoreGive(I2CSem);
@@ -1197,9 +1250,9 @@ void initRtc()
 	if(aqui.traceflag & (1<<BOOTD))
 	printf("[BOOTD]Year %d Month %d Day %d Hora %d Min %d Sec %d Week %d\n",algo.year(),algo.month(),algo.date(),algo.hour(),algo.minute(),algo.second(),algo.dayOfWeek());
 #endif
-	mesg=oldMesg=algo.month();                       // Global Month
-	diag=oldDiag=algo.date();                         // Global Day
-	horag=oldHorag=algo.hour();                      // Global Hour
+	mesg=oldMesg=algo.month()-1;                       // Global Month
+	diag=oldDiag=algo.date()-1;                         // Global Day
+	horag=oldHorag=algo.hour()-1;                      // Global Hour
 	yearg=algo.year();
 	if(oldMesg>12 || oldDiag>31 || oldHorag>23) //Sanity check
 		oldMesg=oldDiag=1;
@@ -1333,13 +1386,6 @@ void app_main(void)
 	delay(3000);
 	int rebootl= rtc_get_reset_reason(1); //Reset cause for CPU 1
     // load configuration
-
-//	err = nvs_open("config", NVS_READWRITE, &nvshandle);
-//	if(err!=ESP_OK)
-//		printf("Error opening NVS File\n");
-//	else
-//		nvs_close(nvshandle);
-
 	read_flash();
 
 	if (aqui.centinel!=CENTINEL || !gpio_get_level((gpio_num_t)0))
@@ -1351,9 +1397,10 @@ void app_main(void)
     printf("Esp32-Meter\n");
 
 	initVars(); 			// used like this instead of var init to be able to have independent file per routine(s)
+	initMeters();
+
 	initI2C();  			// for Screen and RTC
 	initScreen();			// Screen
-	//initWiFi();				// Setup WiFi
 	initRtc();				// RTC until we find out how to use the ESP32 with a Battery
 	init_fram();			// Fram Setup
 	init_temp();			// Temperature sensors
@@ -1369,8 +1416,5 @@ void app_main(void)
 	xTaskCreate(&kbd,"kbd",4096,NULL, MGOS_TASK_PRIORITY, NULL);					// User interface while in development. Erased in RELEASE
 	xTaskCreate(&logManager,"log",4096,NULL, MGOS_TASK_PRIORITY, NULL);				// Log Manager
 	xTaskCreate(&initWiFi,"log",20000,NULL, MGOS_TASK_PRIORITY, NULL);						// Log Manager
-
-//	tarifaBPK[0]=800;
 	// Start Monitoring the Meter Lines
-	initMeters();
 }

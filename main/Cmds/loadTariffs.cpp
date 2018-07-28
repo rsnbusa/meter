@@ -69,10 +69,10 @@ void set_tariff(void * pArg){
 	algo=string(textl);
 	postLog(PAYLL,0,algo);
 	loadDayBPK(diag);
-	sendResponse( argument->pComm,argument->typeMsg, algo,algo.length(),NOERROR,false,false);            // send to someones browser when asked
+	sendResponse( argument->pComm,argument->typeMsg, algo,algo.length(),NOERROR,false,false);
 #ifdef DEBUGMQQT
 	if(aqui.traceflag & (1<<FRAMD))
-		printf("[FRAMD]Load Tariffs\n");                  // A general status condition for display. See routine for numbers.
+		printf("[FRAMD]Load Tariffs\n");
 #endif
 	exit:
 	algo="";
