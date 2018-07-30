@@ -9,7 +9,7 @@
 #include "cmds.h"
 #include "framSPI.h"
 #include "framDef.h"
-
+#include "esp_bt.h"
 
 extern void postLog(int code, int code1,string que);
 
@@ -1002,7 +1002,8 @@ void initVars()
 	sCollectionTopic=string(APP)+"/"+string(aqui.groupName)+"/"+string(aqui.meterName)+"/BILLING";
 	cmdTopic=string(APP)+"/"+string(aqui.groupName)+"/"+string(aqui.meterName)+"/CMD";
 
-	bbuffer=(uint8_t*)pvPortMallocCaps(2200, MALLOC_CAP_DMA);
+//	bbuffer=(uint8_t*)pvPortMallocCaps(2200, MALLOC_CAP_DMA);
+	bbuffer=(uint8_t*)malloc(2200);
 //	memset(&mcount,0,sizeof(mcount));
 
 	GMAXLOSSPER=80;
@@ -1191,7 +1192,7 @@ void init_fram()
 	// FRAM Setup
 	fram.begin(FMOSI,FMISO,FCLK,FCS,&framSem); //will create SPI channel and Semaphore
 	framWords=fram.intframWords;
-//	spi_flash_init();
+	spi_flash_init();
 
 
 	if(1)
@@ -1398,7 +1399,6 @@ void app_main(void)
 
 	initVars(); 			// used like this instead of var init to be able to have independent file per routine(s)
 	initMeters();
-
 	initI2C();  			// for Screen and RTC
 	initScreen();			// Screen
 	initRtc();				// RTC until we find out how to use the ESP32 with a Battery
@@ -1412,9 +1412,9 @@ void app_main(void)
 	write_to_flash();
 	// Start Main Tasks
 
-	xTaskCreate(&displayManager,"dispMgr",8000,NULL, MGOS_TASK_PRIORITY, NULL);		//Manages all display to LCD
-	xTaskCreate(&kbd,"kbd",4096,NULL, MGOS_TASK_PRIORITY, NULL);					// User interface while in development. Erased in RELEASE
-	xTaskCreate(&logManager,"log",4096,NULL, MGOS_TASK_PRIORITY, NULL);				// Log Manager
-	xTaskCreate(&initWiFi,"log",20000,NULL, MGOS_TASK_PRIORITY, NULL);						// Log Manager
+	xTaskCreate(&displayManager,"dispMgr",8192,NULL, MGOS_TASK_PRIORITY, NULL);		//Manages all display to LCD
+	xTaskCreate(&kbd,"kbd",8192,NULL, MGOS_TASK_PRIORITY, NULL);					// User interface while in development. Erased in RELEASE
+	xTaskCreate(&logManager,"log",8192,NULL, MGOS_TASK_PRIORITY, NULL);				// Log Manager
+	xTaskCreate(&initWiFi,"log",10240,NULL, MGOS_TASK_PRIORITY, NULL);						// Log Manager
 	// Start Monitoring the Meter Lines
 }
