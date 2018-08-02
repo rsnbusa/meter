@@ -1,0 +1,19 @@
+/*
+ * set_statusSend.h
+ *
+ *  Created on: Apr 16, 2017
+ *      Author: RSN
+ */
+
+#ifndef MAIN_SET_STATUSSEND_H_
+#define MAIN_SET_STATUSSEND_H_
+
+#define GLOBAL //set GLOBAL for compilation
+
+#include "defines.h"
+#include "includes.h"
+#include "projTypes.h"
+#include <string>
+#include "globals.h"
+
+#endif /* MAIN_SET_STATUSSEND_H_ */

@@ -1,6 +1,6 @@
 # Prerequisites
-*.d
 *.h
+*.d
 *.bin
 *.DS_Store
 *.ld
