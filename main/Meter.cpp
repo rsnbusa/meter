@@ -1403,7 +1403,7 @@ void app_main(void)
 	initScreen();			// Screen
 	initRtc();				// RTC until we find out how to use the ESP32 with a Battery
 	init_fram();			// Fram Setup
-	init_temp();			// Temperature sensors
+//	init_temp();			// Temperature sensors
 	init_log();				// Log file management
 
 	//Save new boot count and reset code
