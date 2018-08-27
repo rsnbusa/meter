@@ -250,6 +250,33 @@ static void IRAM_ATTR gpio_isr_handler(void * arg)
 	BaseType_t tasker=false;
 	u32 fueron;
 
+	if(meter->elpin==WATER)
+	{
+		if(millis()-meter->lastBeatDate>1000)
+			meter->lastBeatDate=millis();
+//		126 Hoy Netlife
+		// dan a  hughes texans hupecol
+		meter->curLife++;
+		meter->timestamp=millis();
+		meter->beatSave++;
+		meter->currentBeat++;
+
+		if((meter->currentBeat % maxw)==0) // 1/10 of liter
+						{
+							if(meter->beatSave>=aqui.free[0])
+							{ //One Liter has flowed
+								meter->saveit=true;
+								meter->beatSave=0;
+							}
+							else
+								meter->saveit=false;
+							xQueueSendFromISR( isrW,arg,( TickType_t ) 0 ); //Water Manager wake up
+							if (tasker)
+								portYIELD_FROM_ISR();
+						}
+		return;
+	}
+
 //	if(!gpio_get_level((gpio_num_t)meter->elpin) && meter->state)
 		if(!gpio_get_level((gpio_num_t)meter->elpin) )
 	{
@@ -258,8 +285,6 @@ static void IRAM_ATTR gpio_isr_handler(void * arg)
 		     {
 				meter->state=0;
 				meter->timestamp=millis(); //last valid isr
-		//		currentBeat[yo]++;
-		//		beatSave[yo]++;
 				meter->beatSave++;
 				meter->currentBeat++;
 				if((meter->currentBeat % GMAXLOSSPER)==0) //every GMAXLOSSPER interval
@@ -291,6 +316,38 @@ static void IRAM_ATTR gpio_isr_handler(void * arg)
 //	  }
 }
 
+void waterManager(void *pArg)
+{
+	meterType soyYo;
+
+	while(1){
+		if( xQueueReceive( isrW, &soyYo, portMAX_DELAY ))
+		{
+			if(xSemaphoreTake(framSem, portMAX_DELAY))  //reserve FRAM
+			{
+				fram.write_beat(soyYo.meterid,soyYo.currentBeat);
+#ifdef DEBUGMQQT
+
+				if(aqui.traceflag & (1<<BEATD))
+					printf("[BEATD]Water %d pulses %d\n",soyYo.meterid,soyYo.currentBeat);
+#endif
+				if(soyYo.saveit) //One Liter has flowed
+					write_to_fram(soyYo.meterid,true); // last saved beat count
+
+				xSemaphoreGive(framSem); //free FRAM reserve
+			}
+		else
+			printf("Failed reserve\n"); //Should be FATAL and stop
+		}
+		else
+		{
+			printf("Sem fail\n");
+					delay(100);
+		}
+	}
+}
+
+
 void interruptTask(void* pvParameter)
 {
 	uint64_t mask=1;
@@ -301,11 +358,20 @@ void interruptTask(void* pvParameter)
 //	gpio_set_direction((gpio_num_t)relayPin, GPIO_MODE_OUTPUT);
 //	gpio_set_level((gpio_num_t)relayPin, aqui.breakers[yo]); // Inverse since its a Normally Closed Relays strategy
 
-	isrQ = xQueueCreate( 100, sizeof( meterType ) );
+	isrQ = xQueueCreate( 100, sizeof( meterType ) ); //Meter queue
 
 	if(!isrQ)
 	{
-		printf("Can not create queue. Stopping\n");
+		printf("Can not create Meter queue. Stopping\n");
+		while(1)
+			delay(100);
+	}
+
+	isrW = xQueueCreate( 100, sizeof( meterType ) ); //Water Queue
+
+	if(!isrW)
+	{
+		printf("Can not create Water queue. Stopping\n");
 		while(1)
 			delay(100);
 	}
@@ -337,6 +403,8 @@ void interruptTask(void* pvParameter)
 		gpio_config(&io_conf);
 		io_conf.pin_bit_mask = (mask<<MQTTLED);
 		gpio_config(&io_conf);
+
+		xTaskCreate(&waterManager, "water", 2048, NULL, 5, NULL);
 
 
 	while(1){
@@ -967,13 +1035,15 @@ void initVars()
 	//We do it this way so we can have a single global.h file with EXTERN variables(when not main app)
 	// and be able to compile routines in an independent file
 
-	uint16_t a=esp_random();
+		uint16_t a=esp_random();
 		sprintf(textl,"meter%04d",a);
 		idd=string(textl);
 #ifdef DEBUGMQQT
 		if(aqui.traceflag & (1<<BOOTD))
 			printf("[BOOTD]Id %s\n",textl);
 #endif
+		// Water max Loss
+		maxw=aqui.free[0]/10;
 
 		settings.host=aqui.mqtt;
 		settings.port = aqui.mqttport;
@@ -1129,6 +1199,7 @@ void initVars()
 	strcpy(lookuptable[9],"HEAPD");
 	strcpy(lookuptable[10],"INTD");
 	strcpy(lookuptable[11],"FRAMD");
+	strcpy(lookuptable[12],"BEATD");
 
 	logText[0]="System booted";
 	logText[1]="FramFormat";
@@ -1403,13 +1474,14 @@ void app_main(void)
 	initScreen();			// Screen
 	initRtc();				// RTC until we find out how to use the ESP32 with a Battery
 	init_fram();			// Fram Setup
-//	init_temp();			// Temperature sensors
+	init_temp();			// Temperature sensors
 	init_log();				// Log file management
 
 	//Save new boot count and reset code
 	aqui.bootcount++;
 	aqui.lastResetCode=rebootl;
 	write_to_flash();
+	displayf=true;
 	// Start Main Tasks
 
 	xTaskCreate(&displayManager,"dispMgr",8192,NULL, MGOS_TASK_PRIORITY, NULL);		//Manages all display to LCD

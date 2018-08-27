@@ -26,10 +26,10 @@ using namespace std;
  EXTERN	char                   	 		meses[12][4];
  EXTERN u8                       	  	daysInMonth [12] ;
  EXTERN char 							lookuptable[NKEYS][10];
- EXTERN  cmdRecord 						cmds[MAXCMDS];
+ EXTERN cmdRecord 						cmds[MAXCMDS];
 
 // Critical Variables
- EXTERN QueueHandle_t 					mqttQ,isrQ;
+ EXTERN QueueHandle_t 					mqttQ,isrQ,isrW;
  EXTERN esp_mqtt_client_config_t  		settings,settingsThing;
  EXTERN esp_mqtt_client_handle_t 		clientCloud, clientThing;
  EXTERN config_flash        			aqui __attribute__((aligned(4))) ;
@@ -75,7 +75,7 @@ using namespace std;
 
  EXTERN char   							WIFIME[9];//must be 8 chars Password by default of ESP8266 MeterIoT Access Point
  EXTERN char   							eserver[20];
- EXTERN int                				eport ,RSSI;
+ EXTERN int                				eport ,RSSI,maxw;
 
 // =========================
 

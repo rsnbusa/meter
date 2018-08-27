@@ -10,7 +10,7 @@
 #define AP_CHAN 						9
 #define BLINKT 							100
 #define BLINKPR 						100
-#define DSPIN 							18
+#define DSPIN 							26
 
 #define CONFIG_SECTOR        			0xc000/ SPI_FLASH_SEC_SIZE
 #define CONFIG_ADDRESS       			0xc000
@@ -37,13 +37,18 @@
 //#define MQTTSERVER		  			    "m11.cloudmqtt.com"
 
 // pins
+
+#define WATER							34
+//#define WATERPULSES						450
+#define MAXLOSSWATER					45
+
 #define SDAW                			21      // SDA
 #define SCLW                			22      // SCL for Wire service
 
 #define METER1              			4       // 1 Meter 5 - 34
 #define METER2              			16      // 2 Meter 14 -35
 #define METER3              			17     // 3 Meter 4 -32
-#define METER4              			15       // 4 Meter 15 -33
+#define METER4              			34       // 4 Meter 15 -33
 
 #define RELAY1              			13      // Relay 1
 #define RELAY2              			12      // Relay 2
@@ -94,7 +99,7 @@
 
 #define HIDESSID            			false // used to received internal commands Strategy
 #define MAXCMDS             			31
-#define MAXDEVS             			4
+#define MAXDEVS             			4	//3 are electric Meters and 1 Water Meter
 #define MINELAPSEDAMPS      			100
 
 #define RTCTIME             			60000  //every minute

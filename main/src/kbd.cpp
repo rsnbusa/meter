@@ -118,6 +118,22 @@ void kbd(void *arg) {
 		//	data[len]=0;
 			switch(data[0])
 			{
+			case '9':
+				printf("Water Pulses/Liter[%d]:",aqui.free[0]);
+				fflush(stdout);
+				s1=get_string((uart_port_t)uart_num,10);
+				if(s1!="")
+					aqui.free[0]=atoi(s1.c_str());
+				write_to_flash();
+				break;
+			case '8':
+				theMeters[3].curLife=theMeters[3].currentBeat=theMeters[3].beatSave=theMeters[3].timestamp=0;
+				printf("WaterCount reset\n");
+				break;
+			case '7':
+				printf("Water Count %d %d\n",theMeters[3].curLife,theMeters[3].currentBeat);
+				break;
+
 			case '6':
 				printf("SetHi\n");
 				gpio_set_level((gpio_num_t)15, 0);

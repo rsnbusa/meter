@@ -521,10 +521,49 @@ void displayData(u8 meter)
 	}
 }
 
+void timerManager(void *arg) {
+	time_t t = 0;
+	struct tm timeinfo ;
+	char textd[20],textt[20];
+	u32 nheap;
+
+	while(true)
+	{
+		nheap=xPortGetFreeHeapSize();
+
+		if(aqui.traceflag & (1<<HEAPD))
+			printf("[HEAPD]Heap %d\n",nheap);
+
+		vTaskDelay(1000/portTICK_PERIOD_MS);
+		time(&t);
+		localtime_r(&t, &timeinfo);
+
+		if (displayf)
+		{
+			if(xSemaphoreTake(I2CSem, portMAX_DELAY))
+			{
+				sprintf(textd,"%02d/%02d/%04d",timeinfo.tm_mday,timeinfo.tm_mon+1,1900+timeinfo.tm_year);
+				sprintf(textt,"%02d:%02d:%02d",timeinfo.tm_hour,timeinfo.tm_min,timeinfo.tm_sec);
+				drawString(16, 5, mqttf?string("m"):string("   "), 10, TEXT_ALIGN_LEFT,NODISPLAY, REPLACE);
+				drawString(0, 51, string(textd), 10, TEXT_ALIGN_LEFT,DISPLAYIT, REPLACE);
+				drawString(86, 51, string(textt), 10, TEXT_ALIGN_LEFT,DISPLAYIT, REPLACE);
+				drawString(61, 51, aqui.working?"On  ":"Off", 10, TEXT_ALIGN_LEFT,DISPLAYIT, REPLACE);
+				xSemaphoreGive(I2CSem);
+			}
+		}
+// check for running water
+		// now - lasttime >X minutes
+
+	}
+}
+
 void displayManager(void *arg) {
 	//   gpio_set_direction(GPIO_NUM_4, GPIO_MODE_OUTPUT);
 	if (aqui.DISPTIME==0)
 		aqui.DISPTIME=DISPMNGR;
+
+	xTaskCreate(&timerManager,"timeMgr",2048,NULL, MGOS_TASK_PRIORITY, NULL);
+
 	while (true) {
 	//	if(aqui.pollGroup)
 			if(1)
