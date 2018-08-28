@@ -22,6 +22,8 @@ void erase_config() //do the dirty work
 	memcpy(aqui.domain,"feediot.co.nf",13);// mosquito server feediot.co.nf
 	aqui.domain[13]=0;
 	aqui.beatsPerKw[0]=aqui.beatsPerKw[1]=aqui.beatsPerKw[2]=800;//old way
+	aqui.bounce[0]=aqui.bounce[1]=aqui.bounce[2]=100;
+	aqui.bounce[0]=450;//water meter 450 pulses perliter
 	//    fram.write_tarif_bpw(0, 800); // since everything is going to be 0, BPW[0]=800 HUMMMMMM????? SHould load Tariffs after this
 	write_to_flash();
 	//	if(  xSemaphoreTake(logSem, portMAX_DELAY))

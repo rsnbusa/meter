@@ -119,11 +119,11 @@ void kbd(void *arg) {
 			switch(data[0])
 			{
 			case '9':
-				printf("Water Pulses/Liter[%d]:",aqui.free[0]);
+				printf("Water Pulses/Liter[%d]:",aqui.bounce[4]);
 				fflush(stdout);
 				s1=get_string((uart_port_t)uart_num,10);
 				if(s1!="")
-					aqui.free[0]=atoi(s1.c_str());
+					aqui.bounce[4]=atoi(s1.c_str());
 				write_to_flash();
 				break;
 			case '8':

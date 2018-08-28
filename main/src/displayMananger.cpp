@@ -339,6 +339,15 @@ void drawPulses(int meter)
 
 }
 
+void drawPulsesAll()
+{
+	display.setColor(BLACK);
+	display.clear();
+	display.setColor(WHITE);
+}
+
+
+
 void displayPago(u8 cual,float pago)
 {
 	u32 corte;
@@ -455,6 +464,10 @@ void displayData(u8 meter)
 		case DISPLAYKWH:
 			showKwh(chosenMeter);
 			break;
+		case DISPLAYALL:
+		case DISPLAYAMPS:
+			drawPulsesAll();
+			break;
 		default:
 			setLogo("EEQ");
 			break;
@@ -515,6 +528,22 @@ void displayData(u8 meter)
 		}
 		break;
 	case DISPLAYUSER:
+		break;
+	case DISPLAYALL:
+		sprintf(local,"%5dp  %5dp  ",theMeters[0].currentBeat,theMeters[1].currentBeat);
+		drawString(64, 14, string(local),16, TEXT_ALIGN_CENTER,NODISPLAY, REPLACE);
+		sprintf(local,"%5dp  %5dw  ",theMeters[2].currentBeat,theMeters[3].currentBeat);
+		drawString(64, 34, string(local),16, TEXT_ALIGN_CENTER,NODISPLAY, REPLACE);
+		drawBars();
+		display.display();
+		break;
+	case DISPLAYAMPS:
+		sprintf(local,"%3dA  %3dA  ",theMeters[0].currentBeat,theMeters[1].currentBeat);
+		drawString(64, 14, string(local),16, TEXT_ALIGN_CENTER,NODISPLAY, REPLACE);
+		sprintf(local,"%3dA           ",theMeters[2].currentBeat);
+		drawString(64, 34, string(local),16, TEXT_ALIGN_CENTER,NODISPLAY, REPLACE);
+		drawBars();
+		display.display();
 		break;
 	default:
 		break;

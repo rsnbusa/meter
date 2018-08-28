@@ -254,8 +254,6 @@ static void IRAM_ATTR gpio_isr_handler(void * arg)
 	{
 		if(millis()-meter->lastBeatDate>1000)
 			meter->lastBeatDate=millis();
-//		126 Hoy Netlife
-		// dan a  hughes texans hupecol
 		meter->curLife++;
 		meter->timestamp=millis();
 		meter->beatSave++;
@@ -263,7 +261,7 @@ static void IRAM_ATTR gpio_isr_handler(void * arg)
 
 		if((meter->currentBeat % maxw)==0) // 1/10 of liter
 						{
-							if(meter->beatSave>=aqui.free[0])
+							if(meter->beatSave>=aqui.bounce[4])
 							{ //One Liter has flowed
 								meter->saveit=true;
 								meter->beatSave=0;
@@ -281,7 +279,8 @@ static void IRAM_ATTR gpio_isr_handler(void * arg)
 		if(!gpio_get_level((gpio_num_t)meter->elpin) )
 	{
 		fueron=millis()-meter->timestamp;
-		 if(fueron>MINBEAT)
+	//	 if(fueron>MINBEAT)
+			 if(fueron>aqui.bounce[meter->meterid])
 		     {
 				meter->state=0;
 				meter->timestamp=millis(); //last valid isr
@@ -1043,7 +1042,7 @@ void initVars()
 			printf("[BOOTD]Id %s\n",textl);
 #endif
 		// Water max Loss
-		maxw=aqui.free[0]/10;
+		maxw=aqui.bounce[4]/10;
 
 		settings.host=aqui.mqtt;
 		settings.port = aqui.mqttport;

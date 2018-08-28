@@ -26,7 +26,7 @@ void set_settingsStatus(void * pArg){
 	state=getParameter(argument,"meter");
 	if(state!="")
 	{
-		cualmeter=atoi(state.c_str());
+		chosenMeter=cualmeter=atoi(state.c_str());
 		if(cualmeter>MAXDEVS-1)
 		{
 			sprintf(textl,"Meter out of range %d[%d]",cualmeter,MAXDEVS-1);
@@ -34,7 +34,8 @@ void set_settingsStatus(void * pArg){
 		}
 
 
-		sprintf(textl,"%d!%d!%d!%s!%d!%d!%d!%d!%d",cualmeter,(int)displayMode,aqui.pollGroup,aqui.medidor_id[cualmeter],aqui.bornKwh[cualmeter],mesg,diag,horag,aqui.MODDISPLAY[cualmeter]);
+		sprintf(textl,"%d!%d!%d!%s!%d!%d!%d!%d!%d!%d",cualmeter,(int)displayMode,aqui.pollGroup,aqui.medidor_id[cualmeter],aqui.bornKwh[cualmeter],
+				mesg,diag,horag,aqui.MODDISPLAY[cualmeter],aqui.bounce[cualmeter]);
 		// chosenmeter,displaymode,display on/off,meterid[chosenmeter],born[meter], mesg,diag,horag, display resolution
 	}
 	else

@@ -34,6 +34,11 @@ void set_displayManager(void * pArg){
 			oldMeter=100;
 			chosenMeter=atoi(state.c_str());
 			sprintf(textl,"Meter Selected %d",chosenMeter);
+			state=getParameter(argument,"bounce");
+			if(state!=""){
+				aqui.bounce[chosenMeter]=atoi(state.c_str());
+				sprintf(textl,"Meter %d Bounce %d",chosenMeter,aqui.bounce[chosenMeter]);
+			}
 
 		}
 		state=getParameter(argument,"int");
