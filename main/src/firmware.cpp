@@ -209,7 +209,7 @@ void set_FirmUpdateCmd(void *pArg)
 		task_fatal_error(argument);
 	}
 	printf("Prepare to restart system!\n");
-	algo="OTA Loaded. Rebooting...";
+	algo="Firmware OTA Loaded. Rebooting...";
 	sendResponse( argument->pComm,argument->typeMsg, algo,algo.length(),NOERROR,false,false);            // send to someones browser when asked
 	algo="";
 	vTaskDelay(3000 /  portTICK_RATE_MS);

@@ -271,6 +271,8 @@ void drawString(int x, int y, string que, int fsize, int align,displayType showi
 
 void drawBars()
 {
+	if (!connf)
+		return;
 	wifi_ap_record_t wifidata;
 	if (esp_wifi_sta_get_ap_info(&wifidata)==0){
 		//		printf("RSSI %d\n",wifidata.rssi);
