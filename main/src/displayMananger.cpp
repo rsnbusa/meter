@@ -466,6 +466,7 @@ void displayData(u8 meter)
 			break;
 		case DISPLAYALL:
 		case DISPLAYAMPS:
+		case DISPLAYUSER:
 			drawPulsesAll();
 			break;
 		default:
@@ -528,6 +529,14 @@ void displayData(u8 meter)
 		}
 		break;
 	case DISPLAYUSER:
+		sprintf(local,"Meter:%s ",aqui.meterName);
+		drawString(2, 12, string(local),10, TEXT_ALIGN_LEFT,NODISPLAY, REPLACE);
+		sprintf(local,"[Firmware %s @ %s]\n",nameStr.c_str(),makeDateString(aqui.lastUpload).c_str());
+		drawString(2, 24, string(local),16, TEXT_ALIGN_LEFT,NODISPLAY, REPLACE);
+		sprintf(local,"BootCount %d",aqui.bootcount);
+		drawString(2, 36, string(local),16, TEXT_ALIGN_LEFT,NODISPLAY, REPLACE);
+		drawBars();
+		display.display();
 		break;
 	case DISPLAYALL:
 		sprintf(local,"%5dp  %5dp  ",theMeters[0].currentBeat,theMeters[1].currentBeat);
