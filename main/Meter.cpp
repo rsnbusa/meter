@@ -1263,7 +1263,7 @@ void loadDayBPK(u16 hoy)
 	if(aqui.traceflag & (1<<BOOTD))
 	{
 		for (int a=0;a<23;a++)
-			printf("[BOOTD] H[%d]=%d ",a,diaTarifa[a]);
+			printf("[BOOTD]H[%d]=%d ",a,diaTarifa[a]);
 		printf("\n");
 
 	}

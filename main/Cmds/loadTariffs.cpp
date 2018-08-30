@@ -13,8 +13,6 @@ int download_callback(request_t *req, char *data, int len)
 {
 	int ret;
 
-//	memcpy(tarifaBPK,data,len);
-	printf("FramWriting[%d] %d\n",addHTTP,len);
 	if(xSemaphoreTake(framSem, portMAX_DELAY))
 	{
 		ret=fram.writeMany(addHTTP,(uint8_t*) data, len);
@@ -44,7 +42,6 @@ void set_tariff(void * pArg){
 	if(aqui.traceflag & (1<<FRAMD))
 		printf("[FRAMD]Tariff loading\n");
 #endif
-	addHTTP=BPH;
 	addHTTP=TARIFADIA;
 	llevoHTTP=0;
 
@@ -72,7 +69,7 @@ void set_tariff(void * pArg){
 	sprintf(textl,"Tariffs ended len %d status %d time %d",llevoHTTP,status,mile-mils);
 	algo=string(textl);
 	postLog(PAYLL,0,algo);
-	loadDayBPK(diag);
+	loadDayBPK(yearDay);
 	sendResponse( argument->pComm,argument->typeMsg, algo,algo.length(),NOERROR,false,false);
 #ifdef DEBUGMQQT
 	if(aqui.traceflag & (1<<FRAMD))

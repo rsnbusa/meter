@@ -106,7 +106,7 @@ bool FramSPI::begin(int MOSI, int MISO, int CLK, int CS,SemaphoreHandle_t *framS
 	ret=spi_bus_initialize(VSPI_HOST, &buscfg, 0);
 	assert(ret == ESP_OK);
 
-	devcfg .clock_speed_hz=20000000;              	//Clock out at 20 MHz
+	devcfg .clock_speed_hz=40000000;              	//Clock out at 20 MHz
 	devcfg.mode=0;                                	//SPI mode 0
 	devcfg.spics_io_num=CS;               			//CS pin
 	devcfg.queue_size=7;                         	//We want to be able to queue 7 transactions at a time
@@ -198,37 +198,18 @@ int FramSPI::writeMany (uint32_t framAddr, uint8_t *valores,uint32_t son)
 	esp_err_t ret=0;
 	uint8_t datos[4],st=0;
 	int stcount,count,fueron; //retries
+	uint8_t lbuf[32];
 
 	memset(&t,0,sizeof(t));
-//	printf("Many start %d addr %d\n",son,framAddr);
 	count=son;
 	while(count>0)
 	{
-//		st=0;
-//		stcount=20;
-//		while(stcount>0 && st!=2)
-//		{
-//			readStatus(&st);
-//			st=st&2; //Were are looking for bit 2 only
-//			if(st!=2)
-//			{
-//				sendCmd(MBRSPI_WREN);
-//				stcount--;
-//				//	delay(1);
-//			}
-//		}
-//		if ((stcount<1) && (st != 2))
-//		{
-//			printf("SPI Read Status Timeout %d\n",count);
-//			return -1; // error internal cant get a valid status. Defective chip or whatever
-//		}
-
 		datos[0]=MBRSPI_WRITE;
 		if(addressBytes==2)
 		{
 			datos[1]=(framAddr & 0xff00)>>8;
 			datos[2]=framAddr& 0xff;
-			fueron=count>29?29:count;
+			fueron=count>29?29:count;  //29= 32 - 3 command bytes MAX tx bytes in Half Duplex 32 bytes
 			t.length=(fueron+3)*8;                     //Command is  (bytes+3) *8 =32 bits
 			memcpy(bbuffer,datos,3);
 			memcpy(&bbuffer[3],valores,fueron); //should check that son is less or equal to bbuffer size
@@ -238,16 +219,17 @@ int FramSPI::writeMany (uint32_t framAddr, uint8_t *valores,uint32_t son)
 			datos[1]=(framAddr & 0xff0000)>>16;
 			datos[2]=(framAddr & 0xff00)>>8;
 			datos[3]=framAddr & 0xff;
-			fueron=count>28?28:count;
+			fueron=count>28?28:count;	//28= 32 - 4 command bytes MAX tx bytes in Half Duplex 32 bytes
 			t.length=(fueron+4)*8;                     //Command is  (bytes+3) *8 =32 bits
-			memcpy(bbuffer,datos,4);
-			memcpy(&bbuffer[4],valores,fueron);
+			memcpy(lbuf,datos,4);
+			memcpy(&lbuf[4],valores,fueron+4);
 		}
 
-		t.tx_buffer=bbuffer;
+		t.tx_buffer=lbuf;
 		ret=spi_device_transmit(spi, &t);  //Transmit!
-		count-=fueron;
-		framAddr+=fueron;
+		count-=fueron; // reduce bytes processed
+		framAddr+=fueron;  //advance Address by fueron bytes processed
+		valores+=fueron;  // advance Buffer to wirte by processed bytes
 	}
 	return ret;
 }
@@ -408,9 +390,9 @@ int FramSPI::readMany (uint32_t framAddr, uint8_t *valores,uint32_t son)
 		t.tx_buffer=&tx;
 		t.rxlength=son*8;
 
-		t.rx_buffer=bbuffer; // MUST MUST use this buffer since its a dma alloc buffer. else data gets lost/misplaced.
+		t.rx_buffer=valores; // MUST MUST use this buffer since its a dma alloc buffer. else data gets lost/misplaced.
 		ret=spi_device_transmit(spi, &t);
-		memcpy(valores,bbuffer,son); //move back to rx buffer
+	//	memcpy(valores,bbuffer,son); //move back to rx buffer
 		return ret;
 	}
 	else
@@ -436,9 +418,9 @@ int FramSPI::readMany (uint32_t framAddr, uint8_t *valores,uint32_t son)
 			t.tx_buffer=&tx;
 			rlen=cuantos>32?32*8:cuantos*8;
 			t.rxlength=rlen;
-			t.rx_buffer=bbuffer;
+			t.rx_buffer=valores;
 			ret=spi_device_transmit(spi, &t);
-			memcpy(valores,bbuffer,rlen/8); //move back to rx buffer
+	//		memcpy(valores,bbuffer,rlen/8); //move back to rx buffer
 			cuantos-=rlen/8;
 			framAddr+=rlen/8;
 			valores+=rlen/8;
@@ -582,7 +564,6 @@ int FramSPI::write_tarif_bytes(uint32_t add,uint8_t*  desde,uint32_t cuantos)
 int FramSPI::read_tarif_bytes(uint32_t add,uint8_t*  donde,uint32_t cuantos)
 {
 	int ret;
-	add+=BPH;
 	ret=readMany(add,donde,cuantos);
 	return ret;
 }
