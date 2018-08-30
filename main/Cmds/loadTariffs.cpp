@@ -13,6 +13,8 @@ int download_callback(request_t *req, char *data, int len)
 {
 	int ret;
 
+//	memcpy(tarifaBPK,data,len);
+	printf("FramWriting[%d] %d\n",addHTTP,len);
 	if(xSemaphoreTake(framSem, portMAX_DELAY))
 	{
 		ret=fram.writeMany(addHTTP,(uint8_t*) data, len);
@@ -43,6 +45,7 @@ void set_tariff(void * pArg){
 		printf("[FRAMD]Tariff loading\n");
 #endif
 	addHTTP=BPH;
+	addHTTP=TARIFADIA;
 	llevoHTTP=0;
 
 	if(!set_commonCmd(argument,false))
@@ -57,7 +60,8 @@ void set_tariff(void * pArg){
 	}
 	//printf("Load tariffs authorized. Start %d\n",addHTTP);
 	mils=millis();
-	req = req_new("http://feediot.co.nf/tarifasDia.txt");
+//	req = req_new("http://feediot.co.nf/tarifasDia.txt");
+	req = req_new("http://feediot.co.nf/tarifasPer.txt");
 	req_setopt(req, REQ_SET_METHOD, "POST");
 	req_setopt(req, REQ_FUNC_DOWNLOAD_CB,download_callback);
 //	printf("Calling request\n");

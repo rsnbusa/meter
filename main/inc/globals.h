@@ -27,7 +27,7 @@ using namespace std;
  EXTERN u8                       	  	daysInMonth [12] ;
  EXTERN char 							lookuptable[NKEYS][10];
  EXTERN cmdRecord 						cmds[MAXCMDS];
-
+ EXTERN char						    *compile_date;
 // Critical Variables
  EXTERN QueueHandle_t 					mqttQ,isrQ,isrW;
  EXTERN esp_mqtt_client_config_t  		settings,settingsThing;
@@ -62,7 +62,7 @@ using namespace std;
  EXTERN struct rst_info   				*rtc_info; //Restart System variable. States Reason for reboot. Look first line for reasons
  EXTERN u8               				curSSID,mesg,diag,horag,oldHorag,oldDiag,oldMesg,lastalign,lastFont,currentMonth,chosenMeter;
  EXTERN u8                				breakerPin[MAXDEVS],barX[3],barH[3],userNum,sonUid;
- EXTERN u16								yearg,daysg;
+ EXTERN u16								yearg,daysg,yearDay;
  EXTERN bool                			mqttf,tracef,showf,framf,mqttThingf;
  EXTERN bool                			firstmqtt,verbose,timef,rtcf,logdiscf,displayf;
 

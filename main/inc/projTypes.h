@@ -53,7 +53,7 @@ typedef enum {ONCE,TIMER,REPEAT,TIMEREPEAT} resetType;
 typedef enum {NOTSENT,SENT} sendType;
 typedef enum {NOREP,REPLACE} overType;
 typedef enum {NODISPLAY,DISPLAYIT} displayType;
-typedef enum {DISPLAYPULSES,DISPLAYKWH,DISPLAYUSER,DISPLAYALL,DISPLAYAMPS} displayModeType;
+typedef enum {DISPLAYPULSES,DISPLAYKWH,DISPLAYUSER,DISPLAYALL,DISPLAYAMPS,DISPLAYNADA} displayModeType;
 typedef enum {NORTC,LOGCLEAR,UPDATED,UPDATEFAIL} alertId;
 #define u16		uint16_t
 #define u8		uint8_t

@@ -87,6 +87,7 @@ int  FramSPI::writeStatus ( uint8_t streg)
 	ret=spi_device_transmit(spi, &t);  //Transmit!
 	return ret;
 }
+
 //bool FramSPI::begin(spi_device_handle_t spic,uint16_t *prod)
 bool FramSPI::begin(int MOSI, int MISO, int CLK, int CS,SemaphoreHandle_t *framSem)
 //bool FramSPI::begin(int MOSI, int MISO, int CLK, int CS)
@@ -153,7 +154,7 @@ bool FramSPI::begin(int MOSI, int MISO, int CLK, int CS,SemaphoreHandle_t *framS
 			addressBytes=3;
 			intframWords=131072;
 			break;
-		case 0x2803:
+		case 0x4803:
 			addressBytes=3;
 			intframWords=262144;
 			break;
@@ -168,6 +169,24 @@ bool FramSPI::begin(int MOSI, int MISO, int CLK, int CS,SemaphoreHandle_t *framS
 			xSemaphoreGive(*framSem);  //SUPER important else its born locked
 		else
 			printf("Cant allocate Fram Sem\n");
+
+		int count=20;
+		uint8_t st;
+//Set it to writeable
+		while(count>0 && st!=2)
+		{
+			readStatus(&st);
+			st=st&2;
+			if(st!=2)
+			{
+				sendCmd(MBRSPI_WREN);
+				count--;
+				delay(1);
+			}
+			else
+				printf("ST %d Count %d\n",st,count);
+		}
+
 		return true;
 	}
 	return false;
@@ -185,24 +204,24 @@ int FramSPI::writeMany (uint32_t framAddr, uint8_t *valores,uint32_t son)
 	count=son;
 	while(count>0)
 	{
-		st=0;
-		stcount=20;
-		while(stcount>0 && st!=2)
-		{
-			readStatus(&st);
-			st=st&2; //Were are looking for bit 2 only
-			if(st!=2)
-			{
-				sendCmd(MBRSPI_WREN);
-				stcount--;
-				//	delay(1);
-			}
-		}
-		if ((stcount<1) && (st != 2))
-		{
-			printf("SPI Read Status Timeout %d\n",count);
-			return -1; // error internal cant get a valid status. Defective chip or whatever
-		}
+//		st=0;
+//		stcount=20;
+//		while(stcount>0 && st!=2)
+//		{
+//			readStatus(&st);
+//			st=st&2; //Were are looking for bit 2 only
+//			if(st!=2)
+//			{
+//				sendCmd(MBRSPI_WREN);
+//				stcount--;
+//				//	delay(1);
+//			}
+//		}
+//		if ((stcount<1) && (st != 2))
+//		{
+//			printf("SPI Read Status Timeout %d\n",count);
+//			return -1; // error internal cant get a valid status. Defective chip or whatever
+//		}
 
 		datos[0]=MBRSPI_WRITE;
 		if(addressBytes==2)
@@ -244,22 +263,22 @@ int FramSPI::writeMany (uint32_t framAddr, uint8_t *valores,uint32_t son)
 //	st=0;
 	memset(&t,0,sizeof(t));
 
-	while(count>0 && st!=2)
-	{
-		readStatus(&st);
-		st=st&2; //Were are looking for bit 2 only
-		if(st!=2)
-		{
-			sendCmd(MBRSPI_WREN);
-			count--;
-		//	delay(1);
-		}
-	}
-	if ((count<1) && (st != 2))
-	{
-		printf("SPI Read Status Timeout %d\n",count);
-		return -1; // error internal cant get a valid status. Defective chip or whatever
-	}
+//	while(count>0 && st!=2)
+//	{
+//		readStatus(&st);
+//		st=st&2; //Were are looking for bit 2 only
+//		if(st!=2)
+//		{
+//			sendCmd(MBRSPI_WREN);
+//			count--;
+//		//	delay(1);
+//		}
+//	}
+//	if ((count<1) && (st != 2))
+//	{
+//		printf("SPI Read Status Timeout %d\n",count);
+//		return -1; // error internal cant get a valid status. Defective chip or whatever
+//	}
 
 	datos[0]=MBRSPI_WRITE;
 	if(addressBytes==2)
@@ -285,8 +304,8 @@ int FramSPI::writeMany (uint32_t framAddr, uint8_t *valores,uint32_t son)
 	ret=spi_device_transmit(spi, &t);  //Transmit!
 	return ret;
 }
- */
 
+*/
 
 
 int FramSPI::format(uint8_t valor, uint8_t *buffer,uint32_t len)
@@ -584,7 +603,7 @@ int FramSPI::write_tarif_bpw(uint8_t tarNum, uint16_t valor)
 	return ret;
 }
 
-int FramSPI::read_tarif_day(uint16_t dia,uint8_t*  donde) //Read 24 Hours of current Day(0-30)
+int FramSPI::read_tarif_day(uint16_t dia,uint8_t*  donde) //Read 24 Hours of current Day(0-365)
 {
 	int ret;
 	uint32_t add=TARIFADIA+dia*24;

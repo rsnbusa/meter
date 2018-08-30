@@ -12,8 +12,10 @@
 #include "esp_bt.h"
 
 extern void postLog(int code, int code1,string que);
+extern  string makeDateString(time_t t);
 
 using namespace std;
+void initMeters();
 
 uint32_t IRAM_ATTR millis()
 {
@@ -724,13 +726,13 @@ void initialize_sntp(void *args)
 	tzset();
 
 	struct tm timeinfo;// = { 0 };
-		timeinfo.tm_hour=timeinfo.tm_min=timeinfo.tm_sec=0;
-		timeinfo.tm_mday=1;
-		timeinfo.tm_mon=0;
-		timeinfo.tm_year=100;
-		// set to 1/1/2000 0:0:0
-//		magicNumber = mktime(&timeinfo); // magic number for timers .Sec  at above date to substract to all set timers to know secs to fire the
-		// timer *1000 im ms
+//		timeinfo.tm_hour=timeinfo.tm_min=timeinfo.tm_sec=0;
+//		timeinfo.tm_mday=1;
+//		timeinfo.tm_mon=0;
+//		timeinfo.tm_year=100;
+//		// set to 1/1/2000 0:0:0
+////		magicNumber = mktime(&timeinfo); // magic number for timers .Sec  at above date to substract to all set timers to know secs to fire the
+//		// timer *1000 im ms
 
 	while(timeinfo.tm_year < (2016 - 1900) && ++retry < retry_count) {
 	//	ESP_LOGI(TAGG, "Waiting for system time to be set... (%d/%d)", retry, retry_count);
@@ -742,13 +744,14 @@ void initialize_sntp(void *args)
 	sntpf=true;
 #ifdef DEBUGMQQT
 	if(aqui.traceflag&(1<<BOOTD))
-		printf("[BOOTD]Internet Time %04d/%02d/%02d %02d:%02d:%02d YDays %d DoW:%d\n",1900+timeinfo.tm_year,timeinfo.tm_mon,timeinfo.tm_mday,
+		printf("[BOOTD]Internet Time %04d/%02d/%02d %02d:%02d:%02d YDays %d DoW:%d\n",1900+timeinfo.tm_year,timeinfo.tm_mon+1,timeinfo.tm_mday,
 			timeinfo.tm_hour,timeinfo.tm_min,timeinfo.tm_sec,timeinfo.tm_yday,timeinfo.tm_wday);
 #endif
-	mesg=timeinfo.tm_mon-1;
+	mesg=timeinfo.tm_mon;
 	diag=timeinfo.tm_mday-1;
 	horag=timeinfo.tm_hour;
 	yearg=timeinfo.tm_year+1900;
+	yearDay=timeinfo.tm_yday;
 
 	rtc.setEpoch(now);
 //	gdayOfWeek=timeinfo.tm_wday;
@@ -839,6 +842,11 @@ esp_err_t wifi_event_handler(void *ctx, system_event_t *event) {
 		connf=true;
 		localIp=event->event_info.got_ip.ip_info.ip;
 		get_meter_name();
+
+		initMeters();
+
+
+
 #ifdef DEBUGMQQT
 		if(aqui.traceflag&(1<<BOOTD))
 			printf( "[BOOTD]Got IP: %d.%d.%d.%d Mqttf %d\n", IP2STR(&event->event_info.got_ip.ip_info.ip),mqttf);
@@ -1161,7 +1169,7 @@ void initVars()
 	eport = 2525;
 
 	chosenMeter=0;// first meter as default
-	displayMode=DISPLAYUSER; //Displaymode when boot first time
+	displayMode=DISPLAYNADA; //Displaymode when boot first time
 	oldMode=displayMode;
 	oldMeter=chosenMeter;
 
@@ -1176,7 +1184,10 @@ void initVars()
 	showf=true;
 
 	mongf=false;
-	//compile_date[] = __DATE__ " " __TIME__;
+    compile_date = __DATE__ ;
+    // " " __TIME__;
+    printf("Compile date %s\n",compile_date);
+
 	usertime=millis();
 
 //	memset(&opts, 0, sizeof(opts));
@@ -1242,18 +1253,26 @@ void initVars()
 
 void loadDayBPK(u16 hoy)
 {
-	if(xSemaphoreTake(framSem, 1000)){
+	printf("LoadTarifas %d\n",hoy);
+	if(xSemaphoreTake(framSem, portMAX_DELAY)){
 		fram.read_tarif_day(hoy, (u8*)&diaTarifa); // all 24 hours of todays Tariff Types [0..255] of TarifaBPW
 		xSemaphoreGive(framSem);
 	}
 	else
 		return;
-
-	for (int a=0;a<24;a++)
+	if(aqui.traceflag & (1<<BOOTD))
 	{
-	//	printf("Tarifa[%d]=%d %d\n",a,tarifaBPK[diaTarifa[a]+a],diaTarifa[a]+a);
-		dia24h[a]=tarifaBPK[diaTarifa[a]]; // Now we have 24 hours of today in Beats per KWH.
+		for (int a=0;a<23;a++)
+			printf("[BOOTD] H[%d]=%d ",a,diaTarifa[a]);
+		printf("\n");
+
 	}
+
+//	for (int a=0;a<24;a++)
+//	{
+//	//	printf("Tarifa[%d]=%d %d\n",a,tarifaBPK[diaTarifa[a]],diaTarifa[a]);
+//		dia24h[a]=tarifaBPK[diaTarifa[a]]; // Now we have 24 hours of today in Beats per KWH.
+//	}
 }
 
 void init_fram()
@@ -1267,7 +1286,7 @@ void init_fram()
 
 	if(1)
 	{
-		if(xSemaphoreTake(framSem, 1000))
+		if(xSemaphoreTake(framSem, portMAX_DELAY))
 		{
 			fram.read_recover(&scratch);
 			xSemaphoreGive(framSem);
@@ -1293,7 +1312,7 @@ void init_fram()
 	//		maxPower[a]=0.0;
 	//		msPower[a]=99999;
 		}
-		if(xSemaphoreTake(framSem, 1000))
+		if(xSemaphoreTake(framSem, portMAX_DELAY))
 		{
 			fram.read_tarif_bytes(0, (u8*)&tarifaBPK, sizeof(tarifaBPK)); // read all 100 types of BPK
 			xSemaphoreGive(framSem);
@@ -1302,7 +1321,7 @@ void init_fram()
 		if(fram.intframWords>32768)
 		{
 			//	printf("Call load day \n");
-			loadDayBPK(diag);
+			loadDayBPK(yearDay);
 		}
 	}
 }
@@ -1319,15 +1338,33 @@ void initRtc()
 	}
 #ifdef DEBUGMQQT
 	if(aqui.traceflag & (1<<BOOTD))
-	printf("[BOOTD]Year %d Month %d Day %d Hora %d Min %d Sec %d Week %d\n",algo.year(),algo.month(),algo.date(),algo.hour(),algo.minute(),algo.second(),algo.dayOfWeek());
+		printf("[BOOTD]RTC Year %d Month %d Day %d Hora %d Min %d Sec %d Week %d\n",algo.year(),algo.month(),algo.date(),algo.hour(),algo.minute(),algo.second(),algo.dayOfWeek());
 #endif
 	mesg=oldMesg=algo.month()-1;                       // Global Month
 	diag=oldDiag=algo.date()-1;                         // Global Day
-	horag=oldHorag=algo.hour()-1;                      // Global Hour
+	horag=oldHorag=algo.hour()-1-UIO;                      // Global Hour - 5 UIO
 	yearg=algo.year();
 	if(oldMesg>12 || oldDiag>31 || oldHorag>23) //Sanity check
 		oldMesg=oldDiag=1;
 	rtcf=true;
+
+	//Now load system time for internal use
+
+	u32 now=algo.getEpoch()-(UIO*3600);
+	struct timeval tm;
+	tm.tv_sec=now;
+	tm.tv_usec=0;
+	settimeofday(&tm,0); //Now local time is set. It could be changed from the SNTP if we get a connections else we use this date
+
+	struct tm timeinfo;
+	time_t tt;
+	time(&tt);
+	localtime_r(&tt, &timeinfo);
+	yearDay=timeinfo.tm_yday;
+	if(aqui.traceflag & (1<<BOOTD))
+		printf("[BOOTD]RTC->UNIX Date %s yDay %d\n",makeDateString(tt).c_str(),yearDay);
+
+
 }
 
 int init_log()
@@ -1468,7 +1505,6 @@ void app_main(void)
     printf("Esp32-Meter\n");
 
 	initVars(); 			// used like this instead of var init to be able to have independent file per routine(s)
-	initMeters();
 	initI2C();  			// for Screen and RTC
 	initScreen();			// Screen
 	initRtc();				// RTC until we find out how to use the ESP32 with a Battery

@@ -102,7 +102,7 @@ void show_config(u8 meter, bool full) // read flash and if HOW display Status me
 					theMeters[meter].curDay,horag,theMeters[meter].curHour);
 		}
 		printf("Pago $%.02f @ %s\n",pago,makeDateString(t).c_str());
-		printf("Working dates: Year %d Mes %d Day %d Hora %d day %d\n",yearg,mesg,diag,horag,daysg);
+		printf("Working dates: Year %d Mes %d Day %d Hora %d day %d dayYear %d\n",yearg,mesg,diag,horag,daysg,yearDay);
 }
 
 

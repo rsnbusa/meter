@@ -2,6 +2,7 @@
 #define defines_h
 #define DEBUGMQQT
 
+#define UIO								(5)
 #define MG_LISTEN_ADDR					"80"
 #define MG_TASK_STACK_SIZE 				4096 /* bytes */
 #define MGOS_TASK_PRIORITY 				1

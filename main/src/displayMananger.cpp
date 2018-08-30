@@ -447,6 +447,7 @@ void displayData(u8 meter)
 {
 	char local[130];
 	string s1,s2;
+	u32 oldMeters[MAXDEVS];
 
 	if (displayMode==DISPLAYUSER)
 		if(millis()-usertime>10000)
@@ -530,28 +531,37 @@ void displayData(u8 meter)
 			s1="";
 		}
 		break;
+
+
 	case DISPLAYUSER:
 		sprintf(local,"Meter:%s ",aqui.meterName);
-		drawString(2, 12, string(local),10, TEXT_ALIGN_LEFT,NODISPLAY, REPLACE);
-		sprintf(local,"[Firmware %s @ %s]\n",nameStr.c_str(),makeDateString(aqui.lastUpload).c_str());
-		drawString(2, 24, string(local),16, TEXT_ALIGN_LEFT,NODISPLAY, REPLACE);
+		drawString(2, 14, string(local),10, TEXT_ALIGN_LEFT,NODISPLAY, REPLACE);
+		sprintf(local,"[Firmware %s]\n",(char*)compile_date);
+		drawString(2, 26, string(local),10, TEXT_ALIGN_LEFT,NODISPLAY, REPLACE);
 		sprintf(local,"BootCount %d",aqui.bootcount);
-		drawString(2, 36, string(local),16, TEXT_ALIGN_LEFT,NODISPLAY, REPLACE);
+		drawString(2, 38, string(local),10, TEXT_ALIGN_LEFT,NODISPLAY, REPLACE);
 		drawBars();
 		display.display();
 		break;
 	case DISPLAYALL:
-		sprintf(local,"%5dp  %5dp  ",theMeters[0].currentBeat,theMeters[1].currentBeat);
-		drawString(64, 14, string(local),16, TEXT_ALIGN_CENTER,NODISPLAY, REPLACE);
-		sprintf(local,"%5dp  %5dw  ",theMeters[2].currentBeat,theMeters[3].currentBeat);
-		drawString(64, 34, string(local),16, TEXT_ALIGN_CENTER,NODISPLAY, REPLACE);
-		drawBars();
-		display.display();
+		if(theMeters[0].currentBeat>oldMeters[0] ||theMeters[0].currentBeat>oldMeters[0] || theMeters[0].currentBeat>oldMeters[0] || theMeters[0].currentBeat>oldMeters[0] )
+		{
+			oldMeters[0]=theMeters[0].currentBeat;
+			oldMeters[1]=theMeters[1].currentBeat;
+			oldMeters[2]=theMeters[2].currentBeat;
+			oldMeters[3]=theMeters[3].currentBeat;
+			sprintf(local,"%5dp  %5dp  ",theMeters[0].currentBeat,theMeters[1].currentBeat);
+			drawString(64, 14, string(local),16, TEXT_ALIGN_CENTER,NODISPLAY, REPLACE);
+			sprintf(local,"%5dp  %5dw  ",theMeters[2].currentBeat,theMeters[3].currentBeat);
+			drawString(64, 34, string(local),16, TEXT_ALIGN_CENTER,NODISPLAY, REPLACE);
+			drawBars();
+			display.display();
+		}
 		break;
 	case DISPLAYAMPS:
-		sprintf(local,"%3dA  %3dA  ",theMeters[0].currentBeat,theMeters[1].currentBeat);
+		sprintf(local,"%3dA  %3dA  ",(int)((float)(4500/theMeters[0].msNow)*2.624),(int)((float)(4500/theMeters[1].msNow)*2.624));
 		drawString(64, 14, string(local),16, TEXT_ALIGN_CENTER,NODISPLAY, REPLACE);
-		sprintf(local,"%3dA           ",theMeters[2].currentBeat);
+		sprintf(local,"%3dA           ",(int)((float)(4500/theMeters[2].msNow)*2.624));
 		drawString(64, 34, string(local),16, TEXT_ALIGN_CENTER,NODISPLAY, REPLACE);
 		drawBars();
 		display.display();
