@@ -279,8 +279,8 @@ static void IRAM_ATTR gpio_isr_handler(void * arg)
 			return;
 		}
 
-//		if(!gpio_get_level((gpio_num_t)meter->elpin) )
-//		{
+	if(!gpio_get_level((gpio_num_t)meter->elpin) )
+		{
 			fueron=millis()-meter->timestamp;
 			 if(fueron>aqui.bounce[meter->meterid])
 			 {
@@ -307,7 +307,7 @@ static void IRAM_ATTR gpio_isr_handler(void * arg)
 					meter->maxamps=fueron;
 			 }
 		}
-	//}
+	}
 }
 
 void waterManager(void *pArg)
