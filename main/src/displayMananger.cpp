@@ -32,9 +32,9 @@ void sendBill(void *pArg)
 	aqui.corteSent[billsendmeter]=true;
 	//   fram.write_cycledate(billsendmeter, oldMesg, ll);
 
-#ifdef DEBUGMQTT
+#ifdef DEBUGMQQT
 	if(aqui.traceflag & (1<<CMDD))
-		printf("Publish %s\n",spublishTopic.c_str());
+		printf("[CMDD]Publish %s\n",spublishTopic.c_str());
 #endif
 	if (!mqttflag)
 	{
@@ -132,17 +132,17 @@ void check_date_change()
 	//printf("Oldhorag %d olddiag %d oldmesg %d\n",oldHorag,oldDiag,oldMesg);
 	if(horag==oldHorag && diag==oldDiag && mesg==oldMesg)
 		return;
-#ifdef DEBUGMQTT
+#ifdef DEBUGMQQT
 	if(aqui.traceflag & (1<<CMDD))
-		printf("Hour change mes %d- %d day %d- %d hora %d- %d\n",mesg,oldMesg,diag,oldDiag,horag,oldHorag);
+		printf("[CMDD]Hour change mes %d- %d day %d- %d hora %d- %d\n",mesg,oldMesg,diag,oldDiag,horag,oldHorag);
 #endif
 	if(horag!=oldHorag) // hour change up or down
 	{
 		for (int a=0;a<MAXDEVS;a++)
 		{
-#ifdef DEBUGMQTT
+#ifdef DEBUGMQQT
 	if(aqui.traceflag & (1<<CMDD))
-		printf("Hour change meter %d val %d\n",a,curHour[a]);
+		printf("[CMDD]Hour change meter %d val %d\n",a,theMeters[a].curHour);
 #endif
 
 			if(xSemaphoreTake(framSem, 1000))
@@ -172,9 +172,9 @@ void check_date_change()
 
 		for (int a=0;a<MAXDEVS;a++)
 		{
-#ifdef DEBUGMQTT
+#ifdef DEBUGMQQT
 	if(aqui.traceflag & (1<<CMDD))
-		printf("Day change mes %d day %d oldday %d corte %d sent %d\n",oldMesg,diag,oldDiag,aqui.diaDeCorte[a],aqui.corteSent[a]);
+		printf("[CMDD]Day change mes %d day %d oldday %d corte %d sent %d\n",oldMesg,diag,oldDiag,aqui.diaDeCorte[a],aqui.corteSent[a]);
 #endif
 			if(xSemaphoreTake(framSem, 1000))
 			{
@@ -369,7 +369,7 @@ void displayPago(u8 cual,float pago)
 		return; // no data to display
 
 	time(&now);
-#ifdef DEBUGMQTT
+#ifdef DEBUGMQQT
 	if(aqui.traceflag & (1<<CMDD))
 		PRINT_MSG("Corte %d  Hoy %d\n",corte,(uint32_t)now);
 #endif
@@ -429,9 +429,9 @@ void check_user_info()
 		xSemaphoreGive(framSem);
 	}
 
-#ifdef DEBUGMQTT
+#ifdef DEBUGMQQT
 	if(aqui.traceflag & (1<<CMDD))
-		printf("User %d pago %.02f\n",userNum,pago);
+		printf("[CMDD]User %d pago %.02f\n",userNum,pago);
 #endif
 	if(pago<0.0)
 		displayCorte(userNum,pago);
@@ -447,7 +447,7 @@ void displayData(u8 meter)
 {
 	char local[130];
 	string s1,s2;
-	u32 oldMeters[MAXDEVS];
+	u32 oldMeters[MAXDEVS],oldMetersK[MAXDEVS];
 
 	if (displayMode==DISPLAYUSER)
 		if(millis()-usertime>10000)
@@ -470,6 +470,7 @@ void displayData(u8 meter)
 		case DISPLAYALL:
 		case DISPLAYAMPS:
 		case DISPLAYUSER:
+		case DISPLAYALLK:
 			drawPulsesAll();
 			break;
 		default:
@@ -485,31 +486,10 @@ void displayData(u8 meter)
 		if(aqui.MODDISPLAY[meter]>100 || aqui.MODDISPLAY[meter]==0)
 			aqui.MODDISPLAY[meter]=5;
 		if(theMeters[meter].currentBeat-theMeters[meter].oldbeat>=aqui.MODDISPLAY[meter])
-	//	if((currentBeat[meter] % aqui.MODDISPLAY[meter])==0)
-
 		{
-					theMeters[meter].oldbeat=theMeters[meter].currentBeat;
-			/*
-                	if((float)prevBeat[meter]>0.0)
-                		amps=4500.0/float(prevBeat[meter]);
-                   if (amps>maxamps[meter])
-                   {
-                       maxamps[meter]=(u16)amps;
-                     //  maxampsDate[meter]=rtc.now();
-                   }
-                   if( amps<minamps[meter] && amps >0.5)
-                   {
-                       minamps[meter]=(u16)amps;
-                    //   minampsDate[meter]=rtc.now();
-                   }
-			 */
+			theMeters[meter].oldbeat=theMeters[meter].currentBeat;
 			sprintf(local,"%d",theMeters[meter].currentBeat);
 			drawString(64, 28, string(local),16, TEXT_ALIGN_CENTER,DISPLAYIT, REPLACE);
-	//		time(&now);
-	//		s2=makeDateString(now);
-	//		sprintf(local,"%d",dia24h[horag]);
-			//       drawString(64, 50, "   Amps:"+String(amps,2)+"   ", 10, TEXT_ALIGN_CENTER,DISPLAYIT, REPLACE);
-	//		drawString(64, 50,"  "+ s2+"  "+s1, 10, TEXT_ALIGN_CENTER,DISPLAYIT, REPLACE);
 			s1=s2="";
 		}
 		break;
@@ -525,13 +505,12 @@ void displayData(u8 meter)
 			sprintf(local," %4d",theMeters[meter].beatSave);
 			s1=string(local);
 			drawString(128, 0, s1, 10, TEXT_ALIGN_RIGHT,DISPLAYIT, REPLACE);
-			sprintf(local,"%s >> %d",meses[mesg],theMeters[mesg].curMonth);
+			sprintf(local,"%s >> %d",meses[mesg],theMeters[meter].curMonth);
 			s1=string(local);
 			drawString(64, 48, s1, 16, TEXT_ALIGN_CENTER,DISPLAYIT, REPLACE);
 			s1="";
 		}
 		break;
-
 
 	case DISPLAYUSER:
 		sprintf(local,"Meter:%s ",aqui.meterName);
@@ -543,8 +522,9 @@ void displayData(u8 meter)
 		drawBars();
 		display.display();
 		break;
+
 	case DISPLAYALL:
-		if(theMeters[0].currentBeat>oldMeters[0] ||theMeters[0].currentBeat>oldMeters[0] || theMeters[0].currentBeat>oldMeters[0] || theMeters[0].currentBeat>oldMeters[0] )
+		if(theMeters[0].currentBeat>oldMeters[0] ||theMeters[1].currentBeat>oldMeters[1] || theMeters[2].currentBeat>oldMeters[2] || theMeters[3].currentBeat>oldMeters[3] )
 		{
 			oldMeters[0]=theMeters[0].currentBeat;
 			oldMeters[1]=theMeters[1].currentBeat;
@@ -558,11 +538,33 @@ void displayData(u8 meter)
 			display.display();
 		}
 		break;
+
+	case DISPLAYALLK:
+		if(theMeters[0].curLife>oldMetersK[0] ||theMeters[1].curLife>oldMetersK[1] || theMeters[2].curLife>oldMetersK[2] || theMeters[3].curLife>oldMetersK[3] )
+		{
+			oldMetersK[0]=theMeters[0].curLife;
+			oldMetersK[1]=theMeters[1].curLife;
+			oldMetersK[2]=theMeters[2].curLife;
+			oldMetersK[3]=theMeters[3].curLife;
+			sprintf(local,"%5dK  %5dK  ",theMeters[0].curLife,theMeters[1].curLife);
+			drawString(64, 14, string(local),16, TEXT_ALIGN_CENTER,NODISPLAY, REPLACE);
+			sprintf(local,"%5dK  %5dK  ",theMeters[2].curLife,theMeters[3].curLife);
+			drawString(64, 34, string(local),16, TEXT_ALIGN_CENTER,NODISPLAY, REPLACE);
+			drawBars();
+			display.display();
+		}
+		break;
+
 	case DISPLAYAMPS:
-		sprintf(local,"%3dA  %3dA  ",(int)((float)(4500/theMeters[0].msNow)*2.624),(int)((float)(4500/theMeters[1].msNow)*2.624));
-		drawString(64, 14, string(local),16, TEXT_ALIGN_CENTER,NODISPLAY, REPLACE);
+		if(theMeters[0].msNow>0 && theMeters[1].msNow>0 )
+		{
+			sprintf(local,"%3dA  %3dA  ",(int)((float)(4500/theMeters[0].msNow)*2.624),(int)((float)(4500/theMeters[1].msNow)*2.624));
+			drawString(64, 14, string(local),16, TEXT_ALIGN_CENTER,NODISPLAY, REPLACE);
+		}
+		if(theMeters[2].msNow>0){
 		sprintf(local,"%3dA           ",(int)((float)(4500/theMeters[2].msNow)*2.624));
 		drawString(64, 34, string(local),16, TEXT_ALIGN_CENTER,NODISPLAY, REPLACE);
+		}
 		drawBars();
 		display.display();
 		break;
@@ -590,6 +592,7 @@ void timerManager(void *arg) {
 
 		if (displayf)
 		{
+			if(displayMode!=DISPLAYKWH)
 			if(xSemaphoreTake(I2CSem, portMAX_DELAY))
 			{
 				sprintf(textd,"%02d/%02d/%04d",timeinfo.tm_mday,timeinfo.tm_mon+1,1900+timeinfo.tm_year);
@@ -608,16 +611,13 @@ void timerManager(void *arg) {
 }
 
 void displayManager(void *arg) {
-	//   gpio_set_direction(GPIO_NUM_4, GPIO_MODE_OUTPUT);
 	if (aqui.DISPTIME==0)
 		aqui.DISPTIME=DISPMNGR;
 
 	xTaskCreate(&timerManager,"timeMgr",2048,NULL, MGOS_TASK_PRIORITY, NULL);
 
 	while (true) {
-	//	if(aqui.pollGroup)
-			if(1)
-
+		if(aqui.pollGroup)
 		{
 			if(xSemaphoreTake(I2CSem, portMAX_DELAY)) //
 			{
@@ -625,15 +625,15 @@ void displayManager(void *arg) {
 				xSemaphoreGive(I2CSem);
 			}
 		}
-		vTaskDelay(200/portTICK_PERIOD_MS);
+		vTaskDelay(100/portTICK_PERIOD_MS);
 	}
 }
 
 void checkDate(void *arg) {
-	GMAXLOSSPER=dia24h[horag]/MAXLOSSPER;
-	if (GMAXLOSSPER==0)
-		GMAXLOSSPER=80;
-	printf("MaxLoss Createdate %d dia24h[%d]=%d\n",GMAXLOSSPER,horag,dia24h[horag]);
+//	GMAXLOSSPER=dia24h[horag]/MAXLOSSPER;
+//	if (GMAXLOSSPER==0)
+//		GMAXLOSSPER=80;
+//	printf("MaxLoss Createdate %d dia24h[%d]=%d\n",GMAXLOSSPER,horag,dia24h[horag]);
 	while (true) {
 		check_date_change();
 		vTaskDelay(1000 / portTICK_PERIOD_MS);

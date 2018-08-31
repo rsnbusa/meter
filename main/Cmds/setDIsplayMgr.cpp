@@ -8,15 +8,10 @@ extern string makeDateString(time_t t);
 extern void drawString(int x, int y, string que, int fsize, int align,displayType showit,overType erase);
 
 void set_displayManager(void * pArg){
-	char textl[100];
+	char textl[120];
 	arg *argument=(arg*)pArg;
 	string algo,state;
 	u16 val;
-	//	int cualmeter,dia,mes,year,desde=0,donde=0;
-
-	//	float pago=0.0;
-	//struct tm tml;
-	//	time_t t;
 
 	if(!set_commonCmd(argument,false))
 		return;
@@ -28,33 +23,38 @@ void set_displayManager(void * pArg){
 		sendResponse( argument->pComm,argument->typeMsg, algo,algo.length(),NOERROR,false,false);            // send to someones browser when asked
 		goto exit;
 	}
-
+	algo="";
 	state=getParameter(argument,"meter");
 		if(state!=""){
-			oldMeter=100;
+			oldMeter=100;//Force display change
 			chosenMeter=atoi(state.c_str());
+			if(chosenMeter>3)
+			{
+				algo="Meter Out of Range";
+				goto exit;
+			}
 			sprintf(textl,"Meter Selected %d",chosenMeter);
 			state=getParameter(argument,"bounce");
 			if(state!=""){
 				aqui.bounce[chosenMeter]=atoi(state.c_str());
 				sprintf(textl,"Meter %d Bounce %d",chosenMeter,aqui.bounce[chosenMeter]);
+				algo+=string(textl);
 			}
-
-		}
-		state=getParameter(argument,"int");
+			state=getParameter(argument,"int");
 			if(state!=""){
 				oldMeter=100;
 				aqui.MODDISPLAY[chosenMeter]=atoi(state.c_str());
 				sprintf(textl,"Meter %d Interval %d",chosenMeter,aqui.MODDISPLAY[chosenMeter]);
-			}
-
+				algo+=string(textl);
+					}
+		}
 
 	state=getParameter(argument,"mode");
 	if(state!=""){
 		oldMeter=100;
 		displayMode=(displayModeType)atoi(state.c_str());
 		sprintf(textl,"Display Mode %d",displayMode);
-
+		algo+=string(textl);
 	}
 
 	state=getParameter(argument,"st");
@@ -74,14 +74,15 @@ void set_displayManager(void * pArg){
 				}
 			}
 			sprintf(textl,"Display %s",val?"on":"Off");
+			algo+=string(textl);
 
 		}
 
-	algo=string(textl);
+//	algo=string(textl);
 	sendResponse( argument->pComm,argument->typeMsg, algo,algo.length(),NOERROR,false,false);            // send to someones browser when asked
 #ifdef DEBUGMQQT
 	if(aqui.traceflag & (1<<CMDD))
-		printf("DisplayMode\n");                  // A general status condition for display. See routine for numbers.
+		printf("[CMDD]DisplayMode\n");                  // A general status condition for display. See routine for numbers.
 #endif
 	exit:
 	write_to_flash();

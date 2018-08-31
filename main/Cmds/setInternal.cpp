@@ -116,6 +116,14 @@ void set_internal(void * pArg){
 
 		}
 
+		state=getParameter(argument,"beats");
+		if(state!="")
+		{
+			aqui.beatsPerKw[meter]=atoi(state.c_str());
+			webstring+="Beats-";
+		}
+
+
 		state=getParameter(argument,"mmmm");
 		if(state!="")
 		{

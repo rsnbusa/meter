@@ -43,10 +43,11 @@ void recover_fram()
 void write_to_fram(u8 meter,bool adding)
 {
 	scratchTypespi scratch;
-	if(aqui.traceflag & (1<<BEATD))
-						printf("[BEATD]Save KWH Meter %d Month %d Day %d Hour %d Year %d\n",meter,mesg,diag,horag,yearg);
-	if(adding)
-	{
+
+//	if(adding)
+//	{
+		if(aqui.traceflag & (1<<BEATD))
+				printf("[BEATD]Save KWH Meter %d Month %d Day %d Hour %d Year %d lifekWh %d\n",meter,mesg,diag,horag,yearg,theMeters[meter].curLife+1);
 		theMeters[meter].curLife++;
 		theMeters[meter].curMonth++;
 		theMeters[meter].curDay++;
@@ -61,7 +62,7 @@ void write_to_fram(u8 meter,bool adding)
 //		curCycle[meter]++; // Corte a Corte counter ??? twice???
 		// lastBeatDate[meter]=now();
 		fram.write_lifedate(meter,theMeters[meter].lastBeatDate);  //should be down after scratch record???
-	}
+//	}
 	scratch.medidor.state=1;                    //scratch written
 	scratch.medidor.meter=meter;
 //	scratch.medidor.month=curMonth[meter];
@@ -124,6 +125,9 @@ void load_from_fram(u8 meter)
 		theMeters[meter].beatSave=theMeters[meter].currentBeat-(nada*aqui.beatsPerKw[meter]);
 		fram.read_minamps(meter,(u8*)&theMeters[meter].minamps);
 		fram.read_maxamps(meter,(u8*)&theMeters[meter].maxamps);
+
+		if(aqui.traceflag & (1<<BEATD))
+			printf("[BEATD]Loaded Meter %d curLife %d\n",meter,theMeters[meter].curLife);
 
 //		fram.read_lifekwh(meter,(u8*)&curLife[meter]);
 //				fram.read_lifedate(meter,(u8*)&lastBeatDate[meter]);

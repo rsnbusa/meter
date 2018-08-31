@@ -155,6 +155,7 @@ void processCmds(void * nc,cJSON * comands)
 				else
 					if(aqui.traceflag & (1<<CMDD))
 							printf("[CMDD]Cmd Not found\n");
+
 #endif
 			}
 		}
@@ -248,57 +249,54 @@ void sendResponse( void * comm,int msgTipo,string que,int len,int code,bool with
 static void IRAM_ATTR gpio_isr_handler(void * arg)
 {
 	meterType *meter=(meterType*)arg;
-	u8 yo=meter->meterid;
-	BaseType_t tasker=false;
 	u32 fueron;
+	BaseType_t tasker;
 
-	if(meter->elpin==WATER)
+	if(memchr(METERS,meter->elpin,4)!=NULL)
 	{
-		if(millis()-meter->lastBeatDate>1000)
-			meter->lastBeatDate=millis();
-		meter->curLife++;
-		meter->timestamp=millis();
-		meter->beatSave++;
-		meter->currentBeat++;
+		if(meter->elpin==WATER)
+		{
+			if(millis()-meter->lastBeatDate>1000)
+				meter->lastBeatDate=millis();
+			meter->curLife++;
+			meter->timestamp=millis();
+			meter->beatSave++;
+			meter->currentBeat++;
 
-		if((meter->currentBeat % maxw)==0) // 1/10 of liter
-						{
-							if(meter->beatSave>=aqui.bounce[4])
-							{ //One Liter has flowed
-								meter->saveit=true;
-								meter->beatSave=0;
+			if((meter->currentBeat % meter->maxLoss)==0) // 1/10 of liter
+							{
+								if(meter->beatSave>=aqui.beatsPerKw[4])
+								{ //One Liter has flowed
+									meter->saveit=true;
+									meter->beatSave=0;
+								}
+								else
+									meter->saveit=false;
+								xQueueSendFromISR( isrW,arg,&tasker ); //Water Manager wake up
+								if (tasker)
+									portYIELD_FROM_ISR();
 							}
-							else
-								meter->saveit=false;
-							xQueueSendFromISR( isrW,arg,( TickType_t ) 0 ); //Water Manager wake up
-							if (tasker)
-								portYIELD_FROM_ISR();
-						}
-		return;
-	}
+			return;
+		}
 
-//	if(!gpio_get_level((gpio_num_t)meter->elpin) && meter->state)
-		if(!gpio_get_level((gpio_num_t)meter->elpin) )
-	{
-		fueron=millis()-meter->timestamp;
-	//	 if(fueron>MINBEAT)
+//		if(!gpio_get_level((gpio_num_t)meter->elpin) )
+//		{
+			fueron=millis()-meter->timestamp;
 			 if(fueron>aqui.bounce[meter->meterid])
-		     {
-				meter->state=0;
+			 {
 				meter->timestamp=millis(); //last valid isr
 				meter->beatSave++;
 				meter->currentBeat++;
-				if((meter->currentBeat % GMAXLOSSPER)==0) //every GMAXLOSSPER interval
+				if((meter->currentBeat % meter->maxLoss)==0) //every GMAXLOSSPER interval
 				{
-					if(meter->beatSave>=dia24h[horag])
+					if(meter->beatSave>=(meter->beatsPerkW*diaTarifa[horag]/100))
 					{ //One kWh has occurred
 						meter->saveit=true;
 						meter->beatSave=0;
-						//meter->beat=0;
 					}
 					else
 						meter->saveit=false;
-					xQueueSendFromISR( isrQ,arg,( TickType_t ) 0 );
+					xQueueSendFromISR( isrQ,arg,&tasker );
 					if (tasker)
 						portYIELD_FROM_ISR();
 				}
@@ -307,14 +305,9 @@ static void IRAM_ATTR gpio_isr_handler(void * arg)
 					meter->minamps=fueron;
 				if(fueron>meter->maxamps)
 					meter->maxamps=fueron;
-
-		     }
+			 }
 		}
-//	  else //Save the current state of the Pin
-//	  {
-//		//    meter->state=1;
-//		    meter->state=gpio_get_level((gpio_num_t)meter->elpin);
-//	  }
+	//}
 }
 
 void waterManager(void *pArg)
@@ -383,27 +376,24 @@ void interruptTask(void* pvParameter)
 	io_conf.pull_down_en =GPIO_PULLDOWN_DISABLE;
 	io_conf.pull_up_en =GPIO_PULLUP_ENABLE;
 
-	memset((void*)theMeters,0,sizeof(theMeters));
-
+//	memset((void*)theMeters,0,sizeof(theMeters));
+	gpio_install_isr_service(ESP_INTR_FLAG_IRAM);
+	for(int a=0;a<MAXDEVS;a++)
+		gpio_intr_disable(METERS[a]);
 	for (int a=0;a<MAXDEVS;a++)
 	{
 		theMeters[a].meterid=a;
 		theMeters[a].elpin=METERS[a];
 		theMeters[a].state=1;
 		theMeters[a].minamps=0xffffffff;
+		theMeters[a].beatsPerkW=aqui.beatsPerKw[a];
+		theMeters[a].maxLoss=aqui.beatsPerKw[a]/10;
 		io_conf.pin_bit_mask = (mask<<METERS[a]);
 		gpio_config(&io_conf);
 		gpio_isr_handler_add((gpio_num_t)METERS[a], gpio_isr_handler,(void*)&theMeters[a]);
 	}
-
-		io_conf.intr_type = GPIO_INTR_DISABLE;
-		io_conf.mode = GPIO_MODE_OUTPUT;
-		io_conf.pull_down_en =GPIO_PULLDOWN_DISABLE;
-		io_conf.pull_up_en =GPIO_PULLUP_DISABLE;
-		io_conf.pin_bit_mask = (mask<<WIFILED);
-		gpio_config(&io_conf);
-		io_conf.pin_bit_mask = (mask<<MQTTLED);
-		gpio_config(&io_conf);
+	for(int a=0;a<MAXDEVS;a++)
+		gpio_intr_enable(METERS[a]);
 
 		xTaskCreate(&waterManager, "water", 2048, NULL, 5, NULL);
 
@@ -417,10 +407,13 @@ void interruptTask(void* pvParameter)
 #ifdef DEBUGMQQT
 
 				if(aqui.traceflag & (1<<INTD))
-					printf("[INTD]Meter %d curBeat %d\n",soyYo.meterid,soyYo.currentBeat);
+					printf("[INTD]Meter %d curBeat %d BPK %d SaveC %d Tariff %d CurLife %d\n",soyYo.meterid,soyYo.currentBeat,soyYo.beatsPerkW,soyYo.maxLoss,
+							diaTarifa[horag],soyYo.curLife);
 #endif
-				if(soyYo.saveit) //One kWh has occurred
+				if(soyYo.saveit){ //One kWh has occurred
+			//		printf("Meter[%d]=%d saveit %d hora[%d] %d\n",soyYo.meterid,soyYo.currentBeat,soyYo.saveit,horag,diaTarifa[horag]);
 					write_to_fram(soyYo.meterid,true); // last saved beat count
+			}
 
 				xSemaphoreGive(framSem); //free FRAM reserve
 			}
@@ -845,8 +838,6 @@ esp_err_t wifi_event_handler(void *ctx, system_event_t *event) {
 
 		initMeters();
 
-
-
 #ifdef DEBUGMQQT
 		if(aqui.traceflag&(1<<BOOTD))
 			printf( "[BOOTD]Got IP: %d.%d.%d.%d Mqttf %d\n", IP2STR(&event->event_info.got_ip.ip_info.ip),mqttf);
@@ -1014,8 +1005,7 @@ void initWiFi(void *pArg)
 void initMeters()
 {
 	string s1="meterX";
-	gpio_install_isr_service(ESP_INTR_FLAG_IRAM);
-	xTaskCreate(&interruptTask,"MeterISR",8192, NULL,(configMAX_PRIORITIES - 1),NULL); //Max Priority
+	xTaskCreate(&interruptTask,"MeterISR",10240, NULL,(configMAX_PRIORITIES - 1),NULL); //Max Priority
 }
 
 void initScreen()
@@ -1248,6 +1238,18 @@ void initVars()
 		//    adc_chars = (esp_adc_cal_characteristics_t*)calloc(1, sizeof(esp_adc_cal_characteristics_t));
 		 //   esp_adc_cal_value_t val_type = esp_adc_cal_characterize(ADC_UNIT_1, atten, ADC_WIDTH_BIT_12, DEFAULT_VREF, adc_chars);
 
+		    gpio_config_t io_conf;
+		    uint64_t mask=1;
+
+			io_conf.intr_type = GPIO_INTR_DISABLE;
+			io_conf.mode = GPIO_MODE_OUTPUT;
+			io_conf.pull_down_en =GPIO_PULLDOWN_DISABLE;
+			io_conf.pull_up_en =GPIO_PULLUP_DISABLE;
+			io_conf.pin_bit_mask = (mask<<WIFILED);
+			gpio_config(&io_conf);
+			io_conf.pin_bit_mask = (mask<<MQTTLED);
+			gpio_config(&io_conf);
+
 }
 
 
@@ -1262,17 +1264,11 @@ void loadDayBPK(u16 hoy)
 		return;
 	if(aqui.traceflag & (1<<BOOTD))
 	{
-		for (int a=0;a<23;a++)
+		for (int a=0;a<24;a++)
 			printf("[BOOTD]H[%d]=%d ",a,diaTarifa[a]);
 		printf("\n");
 
 	}
-
-//	for (int a=0;a<24;a++)
-//	{
-//	//	printf("Tarifa[%d]=%d %d\n",a,tarifaBPK[diaTarifa[a]],diaTarifa[a]);
-//		dia24h[a]=tarifaBPK[diaTarifa[a]]; // Now we have 24 hours of today in Beats per KWH.
-//	}
 }
 
 void init_fram()
@@ -1303,15 +1299,8 @@ void init_fram()
 
 		//load all devices counters from FRAM
 		for (int a=0;a<MAXDEVS;a++)
-		{
 			load_from_fram(a);
-	//		oldTime[a]=0;
-	//		minTime[a]=maxTime[a]=maxbeatTime[a]=0;
-	//		minbeatTime[a]=99999;
-	//		comofue[a]=0;
-	//		maxPower[a]=0.0;
-	//		msPower[a]=99999;
-		}
+
 		if(xSemaphoreTake(framSem, portMAX_DELAY))
 		{
 			fram.read_tarif_bytes(0, (u8*)&tarifaBPK, sizeof(tarifaBPK)); // read all 100 types of BPK
@@ -1519,7 +1508,7 @@ void app_main(void)
 	displayf=true;
 	// Start Main Tasks
 
-	xTaskCreate(&displayManager,"dispMgr",8192,NULL, MGOS_TASK_PRIORITY, NULL);		//Manages all display to LCD
+	xTaskCreate(&displayManager,"dispMgr",10240,NULL, MGOS_TASK_PRIORITY, NULL);		//Manages all display to LCD
 	xTaskCreate(&kbd,"kbd",8192,NULL, MGOS_TASK_PRIORITY, NULL);					// User interface while in development. Erased in RELEASE
 	xTaskCreate(&logManager,"log",8192,NULL, MGOS_TASK_PRIORITY, NULL);				// Log Manager
 	xTaskCreate(&initWiFi,"log",10240,NULL, MGOS_TASK_PRIORITY, NULL);						// Log Manager

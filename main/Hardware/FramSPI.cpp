@@ -6,7 +6,6 @@ extern "C"{
 #include "esp_log.h"
 }
 static const char TAG[]="RSNSPI";
-extern uint8_t *bbuffer;
 extern void delay(uint16_t a);
 //extern SemaphoreHandle_t *framSem;
 
@@ -183,8 +182,7 @@ bool FramSPI::begin(int MOSI, int MISO, int CLK, int CS,SemaphoreHandle_t *framS
 				count--;
 				delay(1);
 			}
-			else
-				printf("ST %d Count %d\n",st,count);
+
 		}
 
 		return true;
@@ -211,8 +209,8 @@ int FramSPI::writeMany (uint32_t framAddr, uint8_t *valores,uint32_t son)
 			datos[2]=framAddr& 0xff;
 			fueron=count>29?29:count;  //29= 32 - 3 command bytes MAX tx bytes in Half Duplex 32 bytes
 			t.length=(fueron+3)*8;                     //Command is  (bytes+3) *8 =32 bits
-			memcpy(bbuffer,datos,3);
-			memcpy(&bbuffer[3],valores,fueron); //should check that son is less or equal to bbuffer size
+			memcpy(lbuf,datos,3);
+			memcpy(&lbuf[3],valores,fueron); //should check that son is less or equal to bbuffer size
 		}
 		else
 		{
