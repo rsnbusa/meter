@@ -133,32 +133,20 @@ void set_internal(void * pArg){
 			if(state!="")
 			{
 				aqui.bornKwh[meter]=atoi(state.c_str());//In KWH
-				printf("Format Meter...");
+		//		printf("Format Meter...");
 				xSemaphoreTake(framSem, portMAX_DELAY);//portMAX_DELAY
-		//		fram.formatMeter(meter,buffer,2000);
 				fram.formatMeter(meter,ota_write_data,2000);
 				xSemaphoreGive(framSem);
 
-				printf("done\n");
 				//reset general counters
+				memset(&theMeters[meter],0,sizeof(theMeters[0]));
 
 				theMeters[meter].curLife=aqui.bornKwh[meter];
-				theMeters[meter].curMonth=0;
-				theMeters[meter].curDay=0;
-				theMeters[meter].curHour=0;
-				theMeters[meter].beatSave=0;
-				theMeters[meter].maxamps=0;
-				theMeters[meter].lastKwHDate=0;
 				theMeters[meter].minamps=9999;
-				theMeters[meter].currentBeat=0;
-				theMeters[meter].oldbeat=theMeters[meter].currentBeat;
 				xSemaphoreTake(framSem, portMAX_DELAY);//portMAX_DELAY
 				fram.write_minamps(meter,theMeters[meter].minamps);
-				fram.write_beat(meter,theMeters[meter].currentBeat);
-				fram.write_lifekwh(meter,aqui.bornKwh[meter
-													  ]);
+				fram.write_lifekwh(meter,aqui.bornKwh[meter]);
 				xSemaphoreGive(framSem);
-
 			}
 			webstring+="Meter Born-";
 
