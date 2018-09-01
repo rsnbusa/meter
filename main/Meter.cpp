@@ -256,8 +256,8 @@ static void IRAM_ATTR gpio_isr_handler(void * arg)
 	{
 		if(meter->elpin==WATER)
 		{
-			if(millis()-meter->lastBeatDate>1000)
-				meter->lastBeatDate=millis();
+			if(millis()-meter->lastKwHDate>1000)
+				meter->lastKwHDate=millis();
 			meter->curLife++;
 			meter->timestamp=millis();
 			meter->beatSave++;
@@ -1280,8 +1280,7 @@ void init_fram()
 	spi_flash_init();
 
 
-	if(1)
-	{
+
 		if(xSemaphoreTake(framSem, portMAX_DELAY))
 		{
 			fram.read_recover(&scratch);
@@ -1301,18 +1300,18 @@ void init_fram()
 		for (int a=0;a<MAXDEVS;a++)
 			load_from_fram(a);
 
-		if(xSemaphoreTake(framSem, portMAX_DELAY))
-		{
-			fram.read_tarif_bytes(0, (u8*)&tarifaBPK, sizeof(tarifaBPK)); // read all 100 types of BPK
-			xSemaphoreGive(framSem);
-		}
+//		if(xSemaphoreTake(framSem, portMAX_DELAY))
+//		{
+//			fram.read_tarif_bytes(0, (u8*)&tarifaBPK, sizeof(tarifaBPK)); // read all 100 types of BPK
+//			xSemaphoreGive(framSem);
+//		}
 
 		if(fram.intframWords>32768)
 		{
 			//	printf("Call load day \n");
 			loadDayBPK(yearDay);
 		}
-	}
+
 }
 
 void initRtc()

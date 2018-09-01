@@ -148,7 +148,7 @@ void set_internal(void * pArg){
 				theMeters[meter].curHour=0;
 				theMeters[meter].beatSave=0;
 				theMeters[meter].maxamps=0;
-				theMeters[meter].lastBeatDate=0;
+				theMeters[meter].lastKwHDate=0;
 				theMeters[meter].minamps=9999;
 				theMeters[meter].currentBeat=0;
 				theMeters[meter].oldbeat=theMeters[meter].currentBeat;

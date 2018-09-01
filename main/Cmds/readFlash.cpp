@@ -97,7 +97,7 @@ void show_config(u8 meter, bool full) // read flash and if HOW display Status me
 			xSemaphoreGive(framSem);
 			printf("Medidor Id[%d]=%s Born:%s Start %d Corte %d[%s]\nLifeBeat[%lu]-[%d] last %s\n",meter+1,aqui.medidor_id[meter],
 					makeDateString(aqui.bornDate[meter]).c_str(),aqui.bornKwh[meter],aqui.diaDeCorte[meter],aqui.corteSent[meter]?"t":"f",
-							ll,theMeters[meter].currentBeat,makeDateString(theMeters[meter].lastBeatDate).c_str());
+							ll,theMeters[meter].currentBeat,makeDateString(theMeters[meter].lastKwHDate).c_str());
 			printf("LifeKWH[%d] Month[%d]=%d Day[%d]=%d Hour[%d]=%d\n",theMeters[meter].curLife,mesg,theMeters[meter].curMonth,diag,
 					theMeters[meter].curDay,horag,theMeters[meter].curHour);
 		}

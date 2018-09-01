@@ -20,7 +20,7 @@ typedef struct {
 	 u32 msNow, minamps,maxamps;
 	 u16 curMonth,curDay,beatSave;
 	 u8 curHour,cycleMonth;
-	 u32 curLife,curCycle,lastBeatDate;
+	 u32 curLife,curCycle,lastKwHDate;
 	 u16 beatsPerkW,maxLoss;
 } meterType;
 

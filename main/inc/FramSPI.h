@@ -25,7 +25,8 @@ extern "C"{
 
 typedef struct
 {
-    uint16_t      state;
+    uint8_t       state;
+    uint8_t		  free;
     uint16_t      meter;
     uint32_t      life;
     uint16_t      month;
