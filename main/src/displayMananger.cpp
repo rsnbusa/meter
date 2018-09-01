@@ -505,7 +505,7 @@ void displayData(u8 meter)
 			sprintf(local," %4d",theMeters[meter].beatSave);
 			s1=string(local);
 			drawString(128, 0, s1, 10, TEXT_ALIGN_RIGHT,DISPLAYIT, REPLACE);
-			sprintf(local,"%s >> %d",meses[mesg],theMeters[meter].curMonth);
+			sprintf(local,"%s >> %d",meses[mesg+1],theMeters[meter].curMonth);
 			s1=string(local);
 			drawString(64, 48, s1, 16, TEXT_ALIGN_CENTER,DISPLAYIT, REPLACE);
 			s1="";
