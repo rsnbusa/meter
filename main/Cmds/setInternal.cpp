@@ -147,6 +147,9 @@ void set_internal(void * pArg){
 				fram.write_minamps(meter,theMeters[meter].minamps);
 				fram.write_lifekwh(meter,aqui.bornKwh[meter]);
 				xSemaphoreGive(framSem);
+				state=getParameter(argument,"serial");
+				if(state!="")
+					memcpy(&aqui.serial[meter],state.c_str(),state.length());
 			}
 			webstring+="Meter Born-";
 

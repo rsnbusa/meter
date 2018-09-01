@@ -128,6 +128,7 @@ typedef struct  {
     u32 responses,cmdsIn;
     displayModeType dispmode;
     u8 lastMeter;
+    char serial[MAXDEVS][20];
 } config_flash;
 
 //typedef struct { char key[10]; int val; } t_symstruct;
