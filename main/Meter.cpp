@@ -876,6 +876,13 @@ esp_err_t wifi_event_handler(void *ctx, system_event_t *event) {
 			xTaskCreate(&mongooseTask, "mongooseTask", 10240, NULL, 5, NULL); //  web commands Interface controller
 			xTaskCreate(&initialize_sntp, "sntp", 2048, NULL, 3, NULL); //will get date
 		}
+		displayMode=aqui.dispmode;
+
+		if(!displayf)
+		{
+			delay(3000);
+			display.displayOff();
+		}
 		break;
 	case SYSTEM_EVENT_AP_START:  // Handle the AP start event
 		tcpip_adapter_ip_info_t ip_info;
@@ -1504,12 +1511,13 @@ void app_main(void)
 	aqui.bootcount++;
 	aqui.lastResetCode=rebootl;
 	write_to_flash();
-	displayf=true;
+	displayf=aqui.pollGroup;
 	// Start Main Tasks
 
 	xTaskCreate(&displayManager,"dispMgr",10240,NULL, MGOS_TASK_PRIORITY, NULL);		//Manages all display to LCD
 	xTaskCreate(&kbd,"kbd",8192,NULL, MGOS_TASK_PRIORITY, NULL);					// User interface while in development. Erased in RELEASE
 	xTaskCreate(&logManager,"log",8192,NULL, MGOS_TASK_PRIORITY, NULL);				// Log Manager
 	xTaskCreate(&initWiFi,"log",10240,NULL, MGOS_TASK_PRIORITY, NULL);						// Log Manager
+
 	// Start Monitoring the Meter Lines
 }

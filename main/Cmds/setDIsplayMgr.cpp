@@ -53,7 +53,17 @@ void set_displayManager(void * pArg){
 	if(state!=""){
 		oldMeter=100;
 		displayMode=(displayModeType)atoi(state.c_str());
+		aqui.dispmode=displayMode;
 		sprintf(textl,"Display Mode %d",displayMode);
+		algo+=string(textl);
+	}
+
+	state=getParameter(argument,"debug");
+	if(state!=""){
+		aqui.traceflag=atoi(state.c_str());
+		if(atoi(state.c_str()))
+			aqui.traceflag=0xffff;
+		sprintf(textl,"Debug Mode %d",aqui.traceflag);
 		algo+=string(textl);
 	}
 
@@ -61,15 +71,17 @@ void set_displayManager(void * pArg){
 		if(state!=""){
 			val=atoi(state.c_str());
 			aqui.pollGroup=val;
+			displayf=val;
 			if(!val)
 				display.displayOff();
 			else{
 				if(xSemaphoreTake(I2CSem, portMAX_DELAY))
 				{
+					oldMeter=100; //Force screen refresh
 					display.init();
 					display.flipScreenVertically();
 					display.clear();
-					drawString(64,10,"EEQ",24,TEXT_ALIGN_CENTER,DISPLAYIT,NOREP);
+					displayMode=aqui.dispmode;
 					xSemaphoreGive(I2CSem);
 				}
 			}

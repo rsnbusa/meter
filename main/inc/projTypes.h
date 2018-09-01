@@ -126,6 +126,7 @@ typedef struct  {
     u8 lastSSID;
     u16 traceflag; // to make it mod 16 for AES encryption
     u32 responses,cmdsIn;
+    displayModeType dispmode;
 } config_flash;
 
 //typedef struct { char key[10]; int val; } t_symstruct;
