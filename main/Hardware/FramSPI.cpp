@@ -9,6 +9,7 @@ static const char TAG[]="RSNSPI";
 extern void delay(uint16_t a);
 //extern SemaphoreHandle_t *framSem;
 
+
 #define DEBUGMQQT
 /*========================================================================*/
 /*                            CONSTRUCTORS                                */
@@ -127,6 +128,7 @@ bool FramSPI::begin(int MOSI, int MISO, int CLK, int CS,SemaphoreHandle_t *framS
 		uint16_t manufID,prod;
 		uint8_t str;
 		getDeviceID(&manufID, &prod);
+#ifdef DEBUGMQQT
 		if (manufID != 0x47f)
 			//{
 			printf("failed %d\n",manufID);
@@ -134,6 +136,7 @@ bool FramSPI::begin(int MOSI, int MISO, int CLK, int CS,SemaphoreHandle_t *framS
 		//}
 		printf("Fram Product %x\n",prod);
 
+#endif
 		//Set write enable after chip is identified
 		switch(prod)
 		{

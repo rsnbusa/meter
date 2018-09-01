@@ -818,6 +818,8 @@ void newSSID(void *pArg)
 
 esp_err_t wifi_event_handler(void *ctx, system_event_t *event) {
 	string local="Closed",temp;
+	u8 mac[8];
+	wifi_config_t config;
 //	int len;
 //	char textl[50];
 #ifdef DEBUGMQQT
@@ -888,7 +890,6 @@ esp_err_t wifi_event_handler(void *ctx, system_event_t *event) {
 		tcpip_adapter_ip_info_t ip_info;
 		tcpip_adapter_get_ip_info(TCPIP_ADAPTER_IF_AP, &ip_info);
 		printf("System not Configured. Use local AP and IP:" IPSTR "\n", IP2STR(&ip_info.ip));
-
 		if(!mongf)
 		{
 			xTaskCreate(&mongooseTask, "mongooseTask", 10240, NULL, 5, NULL);
@@ -968,6 +969,8 @@ void initI2C()
 
 void initWiFi(void *pArg)
 {
+	u8 mac[8];
+	char textl[20];
 	string temp;
 	int len;
 	wifi_init_config_t 				cfg=WIFI_INIT_CONFIG_DEFAULT();
@@ -976,6 +979,8 @@ void initWiFi(void *pArg)
 	ESP_ERROR_CHECK( esp_event_loop_init(wifi_event_handler, NULL));
 	ESP_ERROR_CHECK(esp_wifi_init(&cfg));
 	ESP_ERROR_CHECK(esp_wifi_set_storage(WIFI_STORAGE_RAM));
+
+
 
 	if (aqui.ssid[curSSID][0]!=0)
 	{
@@ -992,9 +997,11 @@ void initWiFi(void *pArg)
 	else
 	{
 		ESP_ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_APSTA));
-		memcpy(configap.ap.ssid,"MeterIoT\0",9);
+		esp_wifi_get_mac(ESP_IF_WIFI_STA, (u8*)&mac);
+		sprintf(textl,"MeterIoT%02x%02x",mac[6],mac[7]);
+		memcpy(configap.ap.ssid,textl,12);
 		memcpy(configap.ap.password,"csttpstt\0",9);
-		configap.ap.ssid[9]=0;
+		configap.ap.ssid[12]=0;
 		configap.ap.password[9]=0;
 		configap.ap.ssid_len=0;
 		configap.ap.authmode=WIFI_AUTH_WPA_PSK;
@@ -1165,7 +1172,7 @@ void initVars()
 
 	eport = 2525;
 
-	chosenMeter=0;// first meter as default
+	chosenMeter=aqui.lastMeter;// first meter as default
 	displayMode=DISPLAYNADA; //Displaymode when boot first time
 	oldMode=displayMode;
 	oldMeter=chosenMeter;
@@ -1262,7 +1269,6 @@ void initVars()
 
 void loadDayBPK(u16 hoy)
 {
-	printf("LoadTarifas %d\n",hoy);
 	if(xSemaphoreTake(framSem, portMAX_DELAY)){
 		fram.read_tarif_day(hoy, (u8*)&diaTarifa); // all 24 hours of todays Tariff Types [0..255] of TarifaBPW
 		xSemaphoreGive(framSem);

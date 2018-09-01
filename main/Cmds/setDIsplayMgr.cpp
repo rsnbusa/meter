@@ -28,6 +28,7 @@ void set_displayManager(void * pArg){
 		if(state!=""){
 			oldMeter=100;//Force display change
 			chosenMeter=atoi(state.c_str());
+			aqui.lastMeter=chosenMeter;
 			if(chosenMeter>3)
 			{
 				algo="Meter Out of Range";
