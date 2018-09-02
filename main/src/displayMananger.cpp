@@ -122,14 +122,11 @@ void check_date_change()
 	time(&now);
 	localtime_r(&now,&timep);
 	mesg=timep.tm_mon;   // Global Month
-	diag=timep.tm_mday;    // Global Day
+	diag=timep.tm_mday-1;    // Global Day
 	yearg=timep.tm_year;     // Global Year
 	horag=timep.tm_hour;     // Global Hour
-	//	printf("%s",asctime(&timep));
+	yearDay=timep.tm_yday;
 
-	//     mesg--;   // Global Month
-	//    diag--;    // Global Day
-	//printf("Oldhorag %d olddiag %d oldmesg %d\n",oldHorag,oldDiag,oldMesg);
 	if(horag==oldHorag && diag==oldDiag && mesg==oldMesg)
 		return;
 #ifdef DEBUGMQQT
@@ -145,7 +142,7 @@ void check_date_change()
 		printf("[CMDD]Hour change meter %d val %d\n",a,theMeters[a].curHour);
 #endif
 
-			if(xSemaphoreTake(framSem, 1000))
+			if(xSemaphoreTake(framSem, portMAX_DELAY))
 			{
 				fram.write_hour(a, yearg,oldMesg,oldDiag,oldHorag, theMeters[a].curHour);//write old one before init new
 				xSemaphoreGive(framSem);
@@ -176,7 +173,7 @@ void check_date_change()
 	if(aqui.traceflag & (1<<CMDD))
 		printf("[CMDD]Day change mes %d day %d oldday %d corte %d sent %d\n",oldMesg,diag,oldDiag,aqui.diaDeCorte[a],aqui.corteSent[a]);
 #endif
-			if(xSemaphoreTake(framSem, 1000))
+			if(xSemaphoreTake(framSem, portMAX_DELAY))
 			{
 				fram. write_day(a,yearg, oldMesg,oldDiag, theMeters[a].curDay);
 				theMeters[a].curDay=0;
@@ -192,7 +189,7 @@ void check_date_change()
 	{
 		for (int a=0;a<MAXDEVS;a++)
 		{
-			if(xSemaphoreTake(framSem, 1000))
+			if(xSemaphoreTake(framSem, portMAX_DELAY))
 			{
 				fram.write_month(a, oldMesg, theMeters[a].curMonth);
 				xSemaphoreGive(framSem);
@@ -592,17 +589,17 @@ void timerManager(void *arg) {
 
 		if (displayf)
 		{
+			sprintf(textd,"%02d/%02d/%04d",timeinfo.tm_mday,timeinfo.tm_mon+1,1900+timeinfo.tm_year);
+			sprintf(textt,"%02d:%02d:%02d",timeinfo.tm_hour,timeinfo.tm_min,timeinfo.tm_sec);
 			if(displayMode!=DISPLAYKWH)
-			if(xSemaphoreTake(I2CSem, portMAX_DELAY))
-			{
-				sprintf(textd,"%02d/%02d/%04d",timeinfo.tm_mday,timeinfo.tm_mon+1,1900+timeinfo.tm_year);
-				sprintf(textt,"%02d:%02d:%02d",timeinfo.tm_hour,timeinfo.tm_min,timeinfo.tm_sec);
-				drawString(16, 5, mqttf?string("m"):string("   "), 10, TEXT_ALIGN_LEFT,NODISPLAY, REPLACE);
-				drawString(0, 51, string(textd), 10, TEXT_ALIGN_LEFT,DISPLAYIT, REPLACE);
-				drawString(86, 51, string(textt), 10, TEXT_ALIGN_LEFT,DISPLAYIT, REPLACE);
-				drawString(61, 51, aqui.working?"On  ":"Off", 10, TEXT_ALIGN_LEFT,DISPLAYIT, REPLACE);
-				xSemaphoreGive(I2CSem);
-			}
+				if(xSemaphoreTake(I2CSem, portMAX_DELAY))
+				{
+					drawString(16, 5, mqttf?string("m"):string("   "), 10, TEXT_ALIGN_LEFT,NODISPLAY, REPLACE);
+					drawString(0, 51, string(textd), 10, TEXT_ALIGN_LEFT,NODISPLAY, REPLACE);
+					drawString(86, 51, string(textt), 10, TEXT_ALIGN_LEFT,NODISPLAY, REPLACE);
+					drawString(61, 51, aqui.working?"On  ":"Off", 10, TEXT_ALIGN_LEFT,DISPLAYIT, REPLACE);
+					xSemaphoreGive(I2CSem);
+				}
 		}
 // check for running water
 		// now - lasttime >X minutes
@@ -610,11 +607,44 @@ void timerManager(void *arg) {
 	}
 }
 
+void timerCallback( TimerHandle_t xTimer )
+{
+	check_date_change();
+	if(firstTimeTimer)
+	{
+		xTimerGenericCommand(xTimer,tmrCOMMAND_CHANGE_PERIOD,3600000 /portTICK_PERIOD_MS,NULL,0); //every hour from now on
+		firstTimeTimer=false;
+	}
+
+}
+
 void displayManager(void *arg) {
+
+	xTaskCreate(&timerManager,"timeMgr",2048,NULL, MGOS_TASK_PRIORITY, NULL);
+
+	//Launch timer for date/hour change
+	time_t now;
+	int van=20;
+	while(!timef && van) //wait for SNTP Time. Could fail so count Xsecs and get the time set by RTC
+	{
+		van--;
+		vTaskDelay(1000/portTICK_PERIOD_MS);
+	}
+	firstTimeTimer=true;
+
+	time(&now);
+	int faltan=3600- now % 3600+2; //second to next hour +2 secs
+	if(aqui.traceflag & (1<<BOOTD))
+		printf("[BOOTD]Secs to Hour %d\n",faltan);
+
+	hourChange=xTimerCreate("OpenTimer",faltan*1000 /portTICK_PERIOD_MS,pdTRUE,( void * ) 0,&timerCallback);
+	if(hourChange==NULL)
+		printf("Failed to create HourChange timer\n");
+	xTimerStart(hourChange,0); //Start it
+
 	if (aqui.DISPTIME==0)
 		aqui.DISPTIME=DISPMNGR;
 
-	xTaskCreate(&timerManager,"timeMgr",2048,NULL, MGOS_TASK_PRIORITY, NULL);
 
 	while (true) {
 		if(aqui.pollGroup)
@@ -626,16 +656,5 @@ void displayManager(void *arg) {
 			}
 		}
 		vTaskDelay(100/portTICK_PERIOD_MS);
-	}
-}
-
-void checkDate(void *arg) {
-//	GMAXLOSSPER=dia24h[horag]/MAXLOSSPER;
-//	if (GMAXLOSSPER==0)
-//		GMAXLOSSPER=80;
-//	printf("MaxLoss Createdate %d dia24h[%d]=%d\n",GMAXLOSSPER,horag,dia24h[horag]);
-	while (true) {
-		check_date_change();
-		vTaskDelay(1000 / portTICK_PERIOD_MS);
 	}
 }

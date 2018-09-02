@@ -90,7 +90,7 @@ using namespace std;
  EXTERN uint8_t* 						mpointer;
  EXTERN int 							cual,oldMode,oldMeter;
 
- EXTERN bool 							timerF,mqttflag,reconf,connf,mongf,mdnsf,timerf,sntpf,subf,loggf;
+ EXTERN bool 							timerF,mqttflag,reconf,connf,mongf,mdnsf,timerf,sntpf,subf,loggf,firstTimeTimer;
 
 // EXTERN uint32_t 						mcount[MAXDEVS];
  EXTERN ip4_addr_t 						localIp;
@@ -123,4 +123,5 @@ using namespace std;
  EXTERN adc1_channel_t 					adcchannel;     //GPIO34 if ADC1, GPIO14 if ADC2
  EXTERN adc_atten_t 					atten;
  EXTERN meterType 						theMeters[MAXDEVS];
+ EXTERN TimerHandle_t					hourChange;
 #endif /* MAIN_GLOBALS_H_ */

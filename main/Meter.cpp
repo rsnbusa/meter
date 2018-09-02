@@ -1179,11 +1179,6 @@ void initVars()
 
 	strcpy((char*)WIFIME,"MeterIoT0");
 //	strcpy((char*)eserver , "mail.smtp2go.com");;
-//	strcpy(s_address , "m11.cloudmqtt.com:18388");
-//	strcpy(s_password , "7UmyqGCCaiUW");
-//	strcpy(s_user_name , "gmktamcz");
-//
-//	strcpy(TAGG , "rsn");
 
 	showf=true;
 
