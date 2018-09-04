@@ -196,7 +196,7 @@ void set_FirmUpdateCmd(void *pArg)
 		  			if(blinker)
 		  				vTaskDelete(blinker);
 		         close(socket_id);
-		         return; //Error
+		         goto exit; //Error
 		      }
 		      else {
 		  		if (buff_len < 0) { /*receive error*/
@@ -204,7 +204,7 @@ void set_FirmUpdateCmd(void *pArg)
 		  			if(blinker)
 		  				vTaskDelete(blinker);
 		  			task_fatal_error(argument);
-		  			return;
+		  			goto exit;
 		  		} else
 		  			if (buff_len > 0 && !resp_body_start) { /*deal with response header*/
 		  				memcpy(ota_write_data, text, buff_len);
@@ -219,7 +219,7 @@ void set_FirmUpdateCmd(void *pArg)
 		  						if(blinker)
 		  						vTaskDelete(blinker);
 		  						task_fatal_error(argument);
-		  						return;
+		  						goto exit;
 		  					}
 		  					binary_file_length += buff_len;
 		  					//   printf("Have written image length %d\n", binary_file_length);
