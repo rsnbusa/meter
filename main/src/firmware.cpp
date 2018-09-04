@@ -322,16 +322,17 @@ void set_FirmUpdateCmd(void *pArg)
 		task_fatal_error(argument);
 		goto exit;
 	}
-	printf("rsnesp_ota_begin succeeded\n");
+	printf("rsnesp_ota_begin succeededbota\n");
 	xTaskCreate(&ConfigSystem, "cfg", 512, (void*)20, 3, &blinker);
 
 	bool resp_body_start = false, flag = true;
 	/*deal with all receive packet*/
 	while (flag) {
-		memset(text, 0, TEXT_BUFFSIZE);
+	//	memset(text, 0, TEXT_BUFFSIZE);
 		memset(ota_write_data, 0, BUFFSIZE);
 	//	printf("Call recv\n");
-		int buff_len = recv(socket_id, text, TEXT_BUFFSIZE, 0);
+	//	int buff_len = recv(socket_id, text, TEXT_BUFFSIZE, 0);
+		int buff_len = recv(socket_id, ota_write_data, BUFFSIZE, 0);
 	//	printf("From recv\n");
 		if (buff_len < 0) { /*receive error*/
 			printf("Error: receive data error! errno=%d\n", errno);
@@ -342,12 +343,13 @@ void set_FirmUpdateCmd(void *pArg)
 
 		} else
 			if (buff_len > 0 && !resp_body_start) { /*deal with response header*/
-				memcpy(ota_write_data, text, buff_len);
-				resp_body_start = read_past_http_header(text, buff_len, update_handle);
+			//	memcpy(ota_write_data, text, buff_len);
+			//	resp_body_start = read_past_http_header(text, buff_len, update_handle);
+				resp_body_start = read_past_http_header(ota_write_data, buff_len, update_handle);
 				//printf("From respBody\n");
 			} else
 				if (buff_len > 0 && resp_body_start) { /*deal with response body*/
-					memcpy(ota_write_data, text, buff_len);
+				//	memcpy(ota_write_data, text, buff_len);
 					err = esp_ota_write( update_handle, (const void *)ota_write_data, buff_len);
 					if (err != ESP_OK) {
 						printf( "Error: esp_ota_write failed! err=0x%x\n", err);
