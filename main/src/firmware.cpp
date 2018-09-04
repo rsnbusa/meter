@@ -99,7 +99,7 @@ static bool connect_to_http_server()
 	}
 	return false;
 }
-
+/* with select and timeout
 void set_FirmUpdateCmd(void *pArg)
 {
 	fd_set readset;
@@ -109,16 +109,7 @@ void set_FirmUpdateCmd(void *pArg)
 	TaskHandle_t blinker;
 	int  buff_len,result;
 	struct timeval tv;
-/*
-	algo=getParameter(argument,"password");
-	if(algo!="zipo")
-	{
-		algo="Not authorized";
-		sendResponse( argument->pComm,argument->typeMsg, algo,algo.length(),NOERROR,false,false);            // send to someones browser when asked
-		free(pArg);
-		vTaskDelete(NULL);
-	}
-*/
+
 	esp_ota_handle_t update_handle = 0 ;
 	const esp_partition_t *update_partition = NULL;
 	gpio_uninstall_isr_service();
@@ -128,11 +119,11 @@ void set_FirmUpdateCmd(void *pArg)
 	const esp_partition_t *configured = esp_ota_get_boot_partition();
 	const esp_partition_t *running = esp_ota_get_running_partition();
 
-	assert(configured == running); /* fresh from reset, should be running from configured boot partition */
+	assert(configured == running); // fresh from reset, should be running from configured boot partition
 	printf("Running partition type %d subtype %d (offset 0x%08x)\n",
 			configured->type, configured->subtype, configured->address);
 
-	/*connect to http server*/
+	//connect to http server
 	if (connect_to_http_server()) {
 		printf( "Connected to http server\n");
 	} else {
@@ -142,7 +133,7 @@ void set_FirmUpdateCmd(void *pArg)
 	}
 
 	int res = -1;
-	/*send GET request to http server*/
+	//send GET request to http server
 	res = send(socket_id, http_request, strlen(http_request), 0);
 	if (res == -1) {
 		printf("Send GET request to server failed\n");
@@ -166,52 +157,52 @@ void set_FirmUpdateCmd(void *pArg)
 	xTaskCreate(&ConfigSystem, "cfg", 512, (void*)20, 3, &blinker);
 
 	bool resp_body_start = false, flag = true;
-	/*deal with all receive packet*/
+	//deal with all receive packet
 
 	while (flag) {
 		memset(text, 0, TEXT_BUFFSIZE);
 		memset(ota_write_data, 0, BUFFSIZE);
 	//	printf("Call recv\n");
 
-			  tv.tv_sec = 1;
+			  tv.tv_sec = 2;
 			   tv.tv_usec = 0;
 		   FD_ZERO(&readset);
 		   FD_SET(socket_id, &readset);
 		   result = select(socket_id + 1, &readset, NULL, NULL, &tv);
 		if (result==0)
 		{
-			printf("Timeout HTTP\n");
-			goto exit;
+			printf("Timeout HTTP\n"); //timeout is end also
+			goto alla;
 		}
 
 		if (result > 0) {
 		   if (FD_ISSET(socket_id, &readset)) {
 		//	   printf("Read data\n");
-		      /* The socket_fd has data available to be read */
+		      // The socket_fd has data available to be read
 			   buff_len = recv(socket_id, text, TEXT_BUFFSIZE,0);
 		    //  result = recv(socket_fd, some_buffer, some_length, 0);
-		      if (buff_len == 0) {
-		         /* This means the other side closed the socket */
-		    	  printf("Closed conn\n");
-		  			if(blinker)
-		  				vTaskDelete(blinker);
-		         close(socket_id);
-		         goto exit; //Error
-		      }
-		      else {
-		  		if (buff_len < 0) { /*receive error*/
+//		      if (buff_len == 0) {
+//		          This means the other side closed the socket
+//		    	  printf("Closed conn\n");
+//		  			if(blinker)
+//		  				vTaskDelete(blinker);
+//		         close(socket_id);
+//		         goto exit; //Error
+//		      }
+//		      else {
+		  		if (buff_len < 0) { //receive error
 		  			printf("Error: receive data error! errno=%d\n", errno);
 		  			if(blinker)
 		  				vTaskDelete(blinker);
 		  			task_fatal_error(argument);
 		  			goto exit;
 		  		} else
-		  			if (buff_len > 0 && !resp_body_start) { /*deal with response header*/
+		  			if (buff_len > 0 && !resp_body_start) { //deal with response header
 		  				memcpy(ota_write_data, text, buff_len);
 		  				resp_body_start = read_past_http_header(text, buff_len, update_handle);
 		  				//printf("From respBody\n");
 		  			} else
-		  				if (buff_len > 0 && resp_body_start) { /*deal with response body*/
+		  				if (buff_len > 0 && resp_body_start) { //deal with response body
 		  					memcpy(ota_write_data, text, buff_len);
 		  					err = esp_ota_write( update_handle, (const void *)ota_write_data, buff_len);
 		  					if (err != ESP_OK) {
@@ -227,7 +218,7 @@ void set_FirmUpdateCmd(void *pArg)
 		  					fflush(stdout);
 
 		  				} else
-		  					if (buff_len == 0) {  /*packet over*/
+		  					if (buff_len == 0) {  //packet over
 		  						flag = false;
 		  						printf( "Connection closed, all packets received\n");
 		  						close(socket_id);
@@ -235,16 +226,16 @@ void set_FirmUpdateCmd(void *pArg)
 		  						printf("Unexpected recv result\n");
 		  					}
 		      }
-		   }
+		 //  }
 		}
 		else if (result < 0) {
-		   /* An error ocurred, just print it to stdout */
+		   // An error ocurred, just print it to stdout
 		   printf("Error on select(): %s\n", strerror(errno));
 		}
 
 
 	}
-
+alla:
 	printf("\nTotal Write binary data length : %d\n", binary_file_length);
 
 	if (esp_ota_end(update_handle) != ESP_OK) {
@@ -267,6 +258,144 @@ void set_FirmUpdateCmd(void *pArg)
 	algo="";
 	vTaskDelay(3000 /  portTICK_RATE_MS);
 	exit:
+	esp_restart();
+	return ;
+}
+*/
+
+void set_FirmUpdateCmd(void *pArg)
+{
+	arg *argument=(arg*)pArg;
+	esp_err_t err;
+	string algo;
+	uint8_t como=1;
+	TaskHandle_t blinker;
+/*
+	algo=getParameter(argument,"password");
+	if(algo!="zipo")
+	{
+		algo="Not authorized";
+		sendResponse( argument->pComm,argument->typeMsg, algo,algo.length(),NOERROR,false,false);            // send to someones browser when asked
+		free(pArg);
+		vTaskDelete(NULL);
+	}
+*/
+	esp_ota_handle_t update_handle = 0 ;
+	const esp_partition_t *update_partition = NULL;
+
+	printf("Starting OTA...\n");
+
+	const esp_partition_t *configured = esp_ota_get_boot_partition();
+	const esp_partition_t *running = esp_ota_get_running_partition();
+
+	assert(configured == running); /* fresh from reset, should be running from configured boot partition */
+	printf("Running partition type %d subtype %d (offset 0x%08x)\n",
+			configured->type, configured->subtype, configured->address);
+
+	/*connect to http server*/
+	if (connect_to_http_server()) {
+		printf( "Connected to http server\n");
+	} else {
+		printf( "Connect to http server failed!\n");
+		task_fatal_error(argument);
+		goto exit;
+	}
+
+	int res = -1;
+	/*send GET request to http server*/
+	res = send(socket_id, http_request, strlen(http_request), 0);
+	if (res == -1) {
+		printf("Send GET request to server failed\n");
+		task_fatal_error(argument);
+		goto exit;
+	} else {
+		printf("Send GET request to server succeeded\n");
+	}
+
+	update_partition = esp_ota_get_next_update_partition(NULL);
+	printf("Writing to partition %s subtype %d at offset 0x%x\n",
+			update_partition->label,update_partition->subtype, update_partition->address);
+	assert(update_partition != NULL);
+	err = esp_ota_begin(update_partition, OTA_SIZE_UNKNOWN, &update_handle);
+	if (err != ESP_OK) {
+		printf( "esp_ota_begin failed, error=%d\n", err);
+		task_fatal_error(argument);
+		goto exit;
+	}
+	printf("rsnesp_ota_begin succeeded\n");
+	xTaskCreate(&ConfigSystem, "cfg", 512, (void*)20, 3, &blinker);
+
+	bool resp_body_start = false, flag = true;
+	/*deal with all receive packet*/
+	while (flag) {
+		memset(text, 0, TEXT_BUFFSIZE);
+		memset(ota_write_data, 0, BUFFSIZE);
+	//	printf("Call recv\n");
+		int buff_len = recv(socket_id, text, TEXT_BUFFSIZE, 0);
+	//	printf("From recv\n");
+		if (buff_len < 0) { /*receive error*/
+			printf("Error: receive data error! errno=%d\n", errno);
+			task_fatal_error(argument);
+			if(blinker)
+				vTaskDelete(blinker);
+			goto exit;
+
+		} else
+			if (buff_len > 0 && !resp_body_start) { /*deal with response header*/
+				memcpy(ota_write_data, text, buff_len);
+				resp_body_start = read_past_http_header(text, buff_len, update_handle);
+				//printf("From respBody\n");
+			} else
+				if (buff_len > 0 && resp_body_start) { /*deal with response body*/
+					memcpy(ota_write_data, text, buff_len);
+					err = esp_ota_write( update_handle, (const void *)ota_write_data, buff_len);
+					if (err != ESP_OK) {
+						printf( "Error: esp_ota_write failed! err=0x%x\n", err);
+						task_fatal_error(argument);
+						if(blinker)
+							vTaskDelete(blinker);
+						goto exit;
+					}
+					binary_file_length += buff_len;
+					//   printf("Have written image length %d\n", binary_file_length);
+
+					como = !como;
+					printf(".");
+					fflush(stdout);
+
+				} else
+					if (buff_len == 0) {  /*packet over*/
+						flag = false;
+						printf( "Connection closed, all packets received\n");
+						close(socket_id);
+					} else {
+						printf("Unexpected recv result\n");
+					}
+	}
+
+	printf("\nTotal Write binary data length : %d\n", binary_file_length);
+
+	if (esp_ota_end(update_handle) != ESP_OK) {
+		printf( "esp_ota_end failed!\n");
+		task_fatal_error(argument);
+		if(blinker)
+			vTaskDelete(blinker);
+		goto exit;
+	}
+	err = esp_ota_set_boot_partition(update_partition);
+	if (err != ESP_OK) {
+		printf( "esp_ota_set_boot_partition failed! err=0x%x\n", err);
+		task_fatal_error(argument);
+		if(blinker)
+			vTaskDelete(blinker);
+		goto exit;
+	}
+//	postLog(FWUPDATE,0);
+exit:	printf("Prepare to restart system!\n");
+	algo="OTA Loaded. Rebooting...";
+	sendResponse( argument->pComm,argument->typeMsg, algo,algo.length(),NOERROR,false,false);            // send to someones browser when asked
+	algo="";
+	vTaskDelay(3000 /  portTICK_RATE_MS);
 	esp_restart();
 	return ;
 }
