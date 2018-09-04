@@ -15,14 +15,14 @@ extern ConfigSystem(void *pArg);
 extern uint32_t IRAM_ATTR millis();
 string getParameter(arg* argument,string cual);
 
-static void __attribute__((noreturn)) task_fatal_error(arg *argument)
+void task_fatal_error(arg *argument)
 								{
 	printf("Exiting task due to fatal error...");
 	close(socket_id);
-	string algo="Not authorized";
-	sendResponse( argument->pComm,argument->typeMsg, algo,algo.length(),NOERROR,false,false);
-	(void)vTaskDelete(NULL);
-	return;
+//	string algo="Not authorized";
+//	sendResponse( argument->pComm,argument->typeMsg, algo,algo.length(),NOERROR,false,false);
+//	(void)vTaskDelete(NULL);
+//	return;
 								}
 
 /*read buffer by byte still delim ,return read bytes counts*/
@@ -102,10 +102,13 @@ static bool connect_to_http_server()
 
 void set_FirmUpdateCmd(void *pArg)
 {
+	fd_set readset;
 	arg *argument=(arg*)pArg;
 	esp_err_t err;
 	string algo;
-
+	TaskHandle_t blinker;
+	int  buff_len,result;
+	struct timeval tv;
 /*
 	algo=getParameter(argument,"password");
 	if(algo!="zipo")
@@ -135,6 +138,7 @@ void set_FirmUpdateCmd(void *pArg)
 	} else {
 		printf( "Connect to http server failed!\n");
 		task_fatal_error(argument);
+		return;
 	}
 
 	int res = -1;
@@ -143,6 +147,7 @@ void set_FirmUpdateCmd(void *pArg)
 	if (res == -1) {
 		printf("Send GET request to server failed\n");
 		task_fatal_error(argument);
+		return;
 	} else {
 		printf("Send GET request to server succeeded\n");
 	}
@@ -156,57 +161,104 @@ void set_FirmUpdateCmd(void *pArg)
 		printf( "esp_ota_begin failed, error=%d\n", err);
 		task_fatal_error(argument);
 	}
-	printf("rsnesp_ota_begin succeeded\n");
-	xTaskCreate(&ConfigSystem, "cfg", 512, (void*)20, 3, NULL);
+	printf("rsnesp_ota_begin succeededSelect\n");
+	//vTaskDelay(10000 /  portTICK_RATE_MS);
+	xTaskCreate(&ConfigSystem, "cfg", 512, (void*)20, 3, &blinker);
 
 	bool resp_body_start = false, flag = true;
 	/*deal with all receive packet*/
+
 	while (flag) {
 		memset(text, 0, TEXT_BUFFSIZE);
 		memset(ota_write_data, 0, BUFFSIZE);
 	//	printf("Call recv\n");
-		int buff_len = recv(socket_id, text, TEXT_BUFFSIZE, 0);
-	//	printf("From recv\n");
-		if (buff_len < 0) { /*receive error*/
-			printf("Error: receive data error! errno=%d\n", errno);
-			task_fatal_error(argument);
-		} else
-			if (buff_len > 0 && !resp_body_start) { /*deal with response header*/
-				memcpy(ota_write_data, text, buff_len);
-				resp_body_start = read_past_http_header(text, buff_len, update_handle);
-				//printf("From respBody\n");
-			} else
-				if (buff_len > 0 && resp_body_start) { /*deal with response body*/
-					memcpy(ota_write_data, text, buff_len);
-					err = esp_ota_write( update_handle, (const void *)ota_write_data, buff_len);
-					if (err != ESP_OK) {
-						printf( "Error: esp_ota_write failed! err=0x%x\n", err);
-						task_fatal_error(argument);
-					}
-					binary_file_length += buff_len;
-					//   printf("Have written image length %d\n", binary_file_length);
-					printf(".");
-					fflush(stdout);
 
-				} else
-					if (buff_len == 0) {  /*packet over*/
-						flag = false;
-						printf( "Connection closed, all packets received\n");
-						close(socket_id);
-					} else {
-						printf("Unexpected recv result\n");
-					}
+			  tv.tv_sec = 1;
+			   tv.tv_usec = 0;
+		   FD_ZERO(&readset);
+		   FD_SET(socket_id, &readset);
+		   result = select(socket_id + 1, &readset, NULL, NULL, &tv);
+		if (result==0)
+		{
+			printf("Timeout HTTP\n");
+			goto exit;
+		}
+
+		if (result > 0) {
+		   if (FD_ISSET(socket_id, &readset)) {
+		//	   printf("Read data\n");
+		      /* The socket_fd has data available to be read */
+			   buff_len = recv(socket_id, text, TEXT_BUFFSIZE,0);
+		    //  result = recv(socket_fd, some_buffer, some_length, 0);
+		      if (buff_len == 0) {
+		         /* This means the other side closed the socket */
+		    	  printf("Closed conn\n");
+		  			if(blinker)
+		  				vTaskDelete(blinker);
+		         close(socket_id);
+		         return; //Error
+		      }
+		      else {
+		  		if (buff_len < 0) { /*receive error*/
+		  			printf("Error: receive data error! errno=%d\n", errno);
+		  			if(blinker)
+		  				vTaskDelete(blinker);
+		  			task_fatal_error(argument);
+		  			return;
+		  		} else
+		  			if (buff_len > 0 && !resp_body_start) { /*deal with response header*/
+		  				memcpy(ota_write_data, text, buff_len);
+		  				resp_body_start = read_past_http_header(text, buff_len, update_handle);
+		  				//printf("From respBody\n");
+		  			} else
+		  				if (buff_len > 0 && resp_body_start) { /*deal with response body*/
+		  					memcpy(ota_write_data, text, buff_len);
+		  					err = esp_ota_write( update_handle, (const void *)ota_write_data, buff_len);
+		  					if (err != ESP_OK) {
+		  						printf( "Error: esp_ota_write failed! err=0x%x\n", err);
+		  						if(blinker)
+		  						vTaskDelete(blinker);
+		  						task_fatal_error(argument);
+		  						return;
+		  					}
+		  					binary_file_length += buff_len;
+		  					//   printf("Have written image length %d\n", binary_file_length);
+		  					printf(".");
+		  					fflush(stdout);
+
+		  				} else
+		  					if (buff_len == 0) {  /*packet over*/
+		  						flag = false;
+		  						printf( "Connection closed, all packets received\n");
+		  						close(socket_id);
+		  					} else {
+		  						printf("Unexpected recv result\n");
+		  					}
+		      }
+		   }
+		}
+		else if (result < 0) {
+		   /* An error ocurred, just print it to stdout */
+		   printf("Error on select(): %s\n", strerror(errno));
+		}
+
+
 	}
 
 	printf("\nTotal Write binary data length : %d\n", binary_file_length);
 
 	if (esp_ota_end(update_handle) != ESP_OK) {
-		printf( "esp_ota_end failed!\n");
+		printf( "esp_ota_end failed read!\n");
+		if(blinker)
+			vTaskDelete(blinker);
+		xTaskCreate(&ConfigSystem, "cfg", 512, (void*)200, 3, &blinker);
 		task_fatal_error(argument);
 	}
 	err = esp_ota_set_boot_partition(update_partition);
 	if (err != ESP_OK) {
 		printf( "esp_ota_set_boot_partition failed! err=0x%x\n", err);
+		vTaskDelete(blinker);
+		xTaskCreate(&ConfigSystem, "cfg", 512, (void*)200, 3, &blinker);
 		task_fatal_error(argument);
 	}
 	printf("Prepare to restart system!\n");
@@ -214,6 +266,7 @@ void set_FirmUpdateCmd(void *pArg)
 	sendResponse( argument->pComm,argument->typeMsg, algo,algo.length(),NOERROR,false,false);            // send to someones browser when asked
 	algo="";
 	vTaskDelay(3000 /  portTICK_RATE_MS);
+	exit:
 	esp_restart();
 	return ;
 }
