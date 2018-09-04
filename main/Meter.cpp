@@ -376,7 +376,6 @@ void interruptTask(void* pvParameter)
 	io_conf.pull_down_en =GPIO_PULLDOWN_DISABLE;
 	io_conf.pull_up_en =GPIO_PULLUP_ENABLE;
 
-//	memset((void*)theMeters,0,sizeof(theMeters));
 	gpio_install_isr_service(ESP_INTR_FLAG_IRAM);
 	for(int a=0;a<MAXDEVS;a++)
 		gpio_intr_disable(METERS[a]);
@@ -396,7 +395,6 @@ void interruptTask(void* pvParameter)
 		gpio_intr_enable(METERS[a]);
 
 		xTaskCreate(&waterManager, "water", 2048, NULL, 5, NULL);
-
 
 	while(1){
 		if( xQueueReceive( isrQ, &soyYo, portMAX_DELAY ))
@@ -858,11 +856,11 @@ esp_err_t wifi_event_handler(void *ctx, system_event_t *event) {
 			    esp_mqtt_client_start(clientCloud);
 			 else
 				 printf("Fail mqtt initCloud\n");
-				 clientThing = esp_mqtt_client_init(&settingsThing);
-				 if(clientThing)
-				    esp_mqtt_client_start(clientThing);
-				 else
-					 printf("Fail mqtt init Thing\n");
+//				 clientThing = esp_mqtt_client_init(&settingsThing);
+//				 if(clientThing)
+//				    esp_mqtt_client_start(clientThing);
+//				 else
+//					 printf("Fail mqtt init Thing\n");
 		}
 
 		if(!mongf)
