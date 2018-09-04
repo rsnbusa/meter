@@ -19,6 +19,7 @@
 using namespace std;
 
 // =========================
+ EXTERN portMUX_TYPE 					myMutex;
  EXTERN portMUX_TYPE 					mux;
  EXTERN char 							APP[9];
  EXTERN char 							WHOAMI[23];

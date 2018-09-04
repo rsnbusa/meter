@@ -252,14 +252,16 @@ static void IRAM_ATTR gpio_isr_handler(void * arg)
 	u32 fueron;
 	BaseType_t tasker;
 
-	if(memchr(METERS,meter->elpin,4)!=NULL)
-	{
+//	if(memchr(METERS,meter->elpin,4)!=NULL)
+//	{
+		u32 ahorita=xTaskGetTickCountFromISR();
+
 		if(meter->elpin==WATER)
 		{
-			if(millis()-meter->lastKwHDate>1000)
-				meter->lastKwHDate=millis();
+			if(ahorita-meter->lastKwHDate>1000)
+				meter->lastKwHDate=ahorita;
 			meter->curLife++;
-			meter->timestamp=millis();
+			meter->timestamp=ahorita;
 			meter->beatSave++;
 			meter->currentBeat++;
 
@@ -279,12 +281,16 @@ static void IRAM_ATTR gpio_isr_handler(void * arg)
 			return;
 		}
 
-	if(!gpio_get_level((gpio_num_t)meter->elpin) )
+		taskENTER_CRITICAL_ISR(&myMutex);
+		u8 como=gpio_get_level((gpio_num_t)meter->elpin);
+		taskEXIT_CRITICAL_ISR(&myMutex);
+
+		if(!como)
 		{
-			fueron=millis()-meter->timestamp;
+			fueron=ahorita-meter->timestamp;
 			 if(fueron>aqui.bounce[meter->meterid])
 			 {
-				meter->timestamp=millis(); //last valid isr
+				meter->timestamp=ahorita; //last valid isr
 				meter->beatSave++;
 				meter->currentBeat++;
 				if((meter->currentBeat % meter->maxLoss)==0) //every GMAXLOSSPER interval
@@ -307,8 +313,9 @@ static void IRAM_ATTR gpio_isr_handler(void * arg)
 					meter->maxamps=fueron;
 			 }
 		}
+
 	}
-}
+//}
 
 void waterManager(void *pArg)
 {
@@ -1497,7 +1504,7 @@ void app_main(void)
 		erase_config();
 	}
     printf("Esp32-Meter\n");
-
+    myMutex = portMUX_INITIALIZER_UNLOCKED;
 	initVars(); 			// used like this instead of var init to be able to have independent file per routine(s)
 	initI2C();  			// for Screen and RTC
 	initScreen();			// Screen

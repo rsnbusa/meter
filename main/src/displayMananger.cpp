@@ -210,6 +210,9 @@ void drawString(int x, int y, string que, int fsize, int align,displayType showi
 		case 10:
 			display.setFont(ArialMT_Plain_10);
 			break;
+		case 12:
+			display.setFont(Dialog_plain_12);
+			break;
 		case 16:
 			display.setFont(ArialMT_Plain_16);
 			break;
@@ -445,6 +448,7 @@ void displayData(u8 meter)
 	char local[130];
 	string s1,s2;
 	u32 oldMeters[MAXDEVS],oldMetersK[MAXDEVS];
+	u8 lsize=16;
 
 	if (displayMode==DISPLAYUSER)
 		if(millis()-usertime>10000)
@@ -527,10 +531,14 @@ void displayData(u8 meter)
 			oldMeters[1]=theMeters[1].currentBeat;
 			oldMeters[2]=theMeters[2].currentBeat;
 			oldMeters[3]=theMeters[3].currentBeat;
+			if(oldMeters[0]>9999 || oldMeters[1]>9999 || oldMeters[2]>9999 || oldMeters[3]>9999 )
+				lsize=12;
+			else
+				lsize=16;
 			sprintf(local,"%5dp  %5dp  ",theMeters[0].currentBeat,theMeters[1].currentBeat);
-			drawString(64, 14, string(local),16, TEXT_ALIGN_CENTER,NODISPLAY, REPLACE);
+			drawString(64, 14, string(local),lsize, TEXT_ALIGN_CENTER,NODISPLAY, REPLACE);
 			sprintf(local,"%5dp  %5dw  ",theMeters[2].currentBeat,theMeters[3].currentBeat);
-			drawString(64, 34, string(local),16, TEXT_ALIGN_CENTER,NODISPLAY, REPLACE);
+			drawString(64, 34, string(local),lsize, TEXT_ALIGN_CENTER,NODISPLAY, REPLACE);
 			drawBars();
 			display.display();
 		}
