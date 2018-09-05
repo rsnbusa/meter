@@ -13,6 +13,12 @@ extern void write_to_flash();
 extern void loadDayBPK(u16 hoy);
 extern uint32_t IRAM_ATTR millis();
 
+void clearScreen()
+		{
+			display.setColor(BLACK);
+			display.clear();
+			display.setColor(WHITE);
+		}
 
 void sendBill(void *pArg)
 {
@@ -149,16 +155,16 @@ void check_date_change()
 			}
 
 			theMeters[a].curHour=0; //init it
-			u16 oldt=tarifaBPK[oldHorag];
+			u16 oldt=diaTarifa[oldHorag];
 			if (diag !=oldDiag)
 				loadDayBPK(diag); // load new day values for Tariffs
 			// calculate remaining Beats to convert to next Tarif IF different
-			if(oldt!=tarifaBPK[horag])
-			{
-				// different BPH. Calculate currentBeat[a]/dia24h[oldhorag]
-				float perc=theMeters[a].currentBeat/dia24h[oldHorag];
-				theMeters[a].currentBeat=(int)(perc*(float)dia24h[horag]);
-			} //else keep counting in the same currentBeat
+//			if(oldt!=diaTarifa[horag])
+//			{
+//				// different BPH. Calculate currentBeat[a]/dia24h[oldhorag]
+//				float perc=theMeters[a].currentBeat/dia24h[oldHorag];
+//				theMeters[a].currentBeat=(int)(perc*(float)dia24h[horag]);
+//			} //else keep counting in the same currentBeat
 			oldHorag=horag;
 		}
 	}
@@ -277,6 +283,10 @@ void drawBars()
 	if (esp_wifi_sta_get_ap_info(&wifidata)==0){
 		//		printf("RSSI %d\n",wifidata.rssi);
 		RSSI=80+wifidata.rssi;
+		if(oldRSSI==RSSI)
+			return;
+
+		oldRSSI=RSSI;
 	}
 	for (int a=0;a<3;a++)
 	{
@@ -293,59 +303,62 @@ void drawBars()
 
 void setLogo(string cual)
 {
-
-	display.setColor(BLACK);
-	display.clear();
-	display.setColor(WHITE);
-	drawString(64, 20, cual.c_str(),24, TEXT_ALIGN_CENTER,NODISPLAY, NOREP);
-	drawBars();
+	if(xSemaphoreTake(I2CSem, portMAX_DELAY)) //
+	{
+		clearScreen();
+		drawString(64, 20, cual.c_str(),24, TEXT_ALIGN_CENTER,NODISPLAY, NOREP);
+		drawBars();
+		xSemaphoreGive(I2CSem);
+	}
 }
 
 void showKwh(u8 meter)
 {
 	char local[130];
-	display.setColor(BLACK);
-	display.clear();
-	display.setColor(WHITE);
+	if(xSemaphoreTake(I2CSem, portMAX_DELAY)) //
+	{
+		clearScreen();
 
-	drawString(64,0," KWH",24, TEXT_ALIGN_CENTER,NODISPLAY, NOREP);
-	sprintf(local,"M%d",chosenMeter);
-	drawString(22,0, string(local),10, TEXT_ALIGN_LEFT,NODISPLAY, NOREP);
-	sprintf(local,"%d",theMeters[meter].curLife);
-
-	drawString(64, 24, string(local), 24, TEXT_ALIGN_CENTER,NODISPLAY, NOREP);
-
-	sprintf(local,"%s >> %d",meses[mesg],theMeters[meter].curMonth);
-	drawString(64, 48, local, 16, TEXT_ALIGN_CENTER,NODISPLAY, NOREP);
-	drawBars();
+		drawString(64,0," KWH",24, TEXT_ALIGN_CENTER,NODISPLAY, NOREP);
+		sprintf(local,"M%d",chosenMeter);
+		drawString(22,0, string(local),10, TEXT_ALIGN_LEFT,NODISPLAY, NOREP);
+		sprintf(local,"%d",theMeters[meter].curLife);
+		drawString(64, 24, string(local), 24, TEXT_ALIGN_CENTER,NODISPLAY, NOREP);
+		sprintf(local,"%s >> %d",meses[mesg],theMeters[meter].curMonth);
+		drawString(64, 48, local, 16, TEXT_ALIGN_CENTER,NODISPLAY, NOREP);
+		drawBars();
+		xSemaphoreGive(I2CSem);
+	}
 }
-
 
 void drawPulses(int meter)
 {
 	char textl[130];
-	display.setColor(BLACK);
-	display.clear();
-	display.setColor(WHITE);
-	drawString(64, 0, "Pulsos",24, TEXT_ALIGN_CENTER,NODISPLAY, NOREP);
-	sprintf(textl,"%d",aqui.MODDISPLAY[meter]);
-	drawString(102, 0, string(textl), 10, TEXT_ALIGN_LEFT, NODISPLAY, NOREP);
-	sprintf(textl,"%d",meter);
-	drawString(102, 16, "M"+string(textl), 10, TEXT_ALIGN_LEFT, NODISPLAY, NOREP);
-	sprintf(textl,"%d",theMeters[meter].currentBeat);
-	drawString(64, 28, string(textl),16, TEXT_ALIGN_CENTER,NODISPLAY, REPLACE);
-	drawBars();
-	if (mqttf)
-		drawString(16, 5, string("m"), 10, TEXT_ALIGN_LEFT,NODISPLAY, NOREP);
-	display.display();
+	if(xSemaphoreTake(I2CSem, portMAX_DELAY)) //
+	{
+
+		drawString(64, 0, "Pulsos",24, TEXT_ALIGN_CENTER,NODISPLAY, NOREP);
+		sprintf(textl,"%d",aqui.MODDISPLAY[meter]);
+		drawString(102, 0, string(textl), 10, TEXT_ALIGN_LEFT, NODISPLAY, NOREP);
+		sprintf(textl,"%d",meter);
+		drawString(102, 16, "M"+string(textl), 10, TEXT_ALIGN_LEFT, NODISPLAY, NOREP);
+		sprintf(textl,"%d",theMeters[meter].currentBeat);
+		drawString(64, 28, string(textl),16, TEXT_ALIGN_CENTER,NODISPLAY, REPLACE);
+		if (mqttf)
+			drawString(16, 5, string("m"), 10, TEXT_ALIGN_LEFT,NODISPLAY, NOREP);
+		drawBars();
+		xSemaphoreGive(I2CSem);
+	}
 
 }
 
 void drawPulsesAll()
 {
-	display.setColor(BLACK);
-	display.clear();
-	display.setColor(WHITE);
+	if(xSemaphoreTake(I2CSem, portMAX_DELAY)) //
+	{
+		clearScreen();
+		xSemaphoreGive(I2CSem);
+	}
 }
 
 
@@ -360,7 +373,7 @@ void displayPago(u8 cual,float pago)
 	display.clear();
 	display.setColor(WHITE);
 
-	if(xSemaphoreTake(framSem, 1000))
+	if(xSemaphoreTake(framSem, portMAX_DELAY))
 	{
 		fram.read_corte(cual, (u8*)&corte);
 		xSemaphoreGive(framSem);
@@ -376,7 +389,7 @@ void displayPago(u8 cual,float pago)
 	if (corte<now)
 	{
 		// reset
-		if(xSemaphoreTake(framSem, 1000))
+		if(xSemaphoreTake(framSem, portMAX_DELAY))
 		{
 			//portMAX_DELAY
 			fram.write_pago(cual, 0.0);
@@ -388,7 +401,7 @@ void displayPago(u8 cual,float pago)
 	drawString(64, 0, string(aqui.medidor_id[cual]),16, TEXT_ALIGN_CENTER,DISPLAYIT, NOREP);
 	sprintf(textl,"$%.02f",pago);
 	drawString(64, 20, string(textl), 24, TEXT_ALIGN_CENTER,DISPLAYIT, REPLACE);
-	if(xSemaphoreTake(framSem, 1000))
+	if(xSemaphoreTake(framSem, portMAX_DELAY))
 	{//portMAX_DELAY
 		fram.read_corte(cual, (u8*)&corte);
 		xSemaphoreGive(framSem);
@@ -405,8 +418,7 @@ void displayCorte(u8 cual,float pago)
 {
 	char textl[130];
 	//	u32 corte;
-	display.clear();
-	display.setColor(WHITE);
+	clearScreen();
 	drawString(64, 0, "Impago",24, TEXT_ALIGN_CENTER,DISPLAYIT, NOREP);
 	drawString(64, 26, string(aqui.medidor_id[cual]), 16, TEXT_ALIGN_CENTER,DISPLAYIT, REPLACE);
 	sprintf(textl,"-$%.02f",(pago*-1.0));
@@ -423,7 +435,7 @@ void check_user_info()
 {
 	// global userNum is the current user to be displayed
 	float pago;
-	if(xSemaphoreTake(framSem, 1000))
+	if(xSemaphoreTake(framSem, portMAX_DELAY))
 	{//portMAX_DELAY
 		fram.read_pago( userNum, (u8*)&pago);
 		xSemaphoreGive(framSem);
@@ -490,7 +502,11 @@ void displayData(u8 meter)
 		{
 			theMeters[meter].oldbeat=theMeters[meter].currentBeat;
 			sprintf(local,"%d",theMeters[meter].currentBeat);
-			drawString(64, 28, string(local),16, TEXT_ALIGN_CENTER,DISPLAYIT, REPLACE);
+			if(xSemaphoreTake(I2CSem, portMAX_DELAY)) //
+			{
+				drawString(64, 28, string(local),16, TEXT_ALIGN_CENTER,DISPLAYIT, REPLACE);
+				xSemaphoreGive(I2CSem);
+			}
 			s1=s2="";
 		}
 		break;
@@ -502,26 +518,34 @@ void displayData(u8 meter)
 			theMeters[meter].oldbeat=theMeters[meter].currentBeat;
 			sprintf(local,"%d",theMeters[meter].curLife);
 			s1=string(local);
-			drawString(64, 24,s1, 24, TEXT_ALIGN_CENTER,DISPLAYIT, REPLACE);
-			sprintf(local," %4d",theMeters[meter].beatSave);
-			s1=string(local);
-			drawString(128, 0, s1, 10, TEXT_ALIGN_RIGHT,DISPLAYIT, REPLACE);
-			sprintf(local,"%s >> %d",meses[mesg+1],theMeters[meter].curMonth);
-			s1=string(local);
-			drawString(64, 48, s1, 16, TEXT_ALIGN_CENTER,DISPLAYIT, REPLACE);
-			s1="";
+			if(xSemaphoreTake(I2CSem, portMAX_DELAY)) //
+			{
+				drawString(64, 24,s1, 24, TEXT_ALIGN_CENTER,DISPLAYIT, REPLACE);
+				sprintf(local," %4d",theMeters[meter].beatSave);
+				s1=string(local);
+				drawString(128, 0, s1, 10, TEXT_ALIGN_RIGHT,DISPLAYIT, REPLACE);
+				sprintf(local,"%s >> %d",meses[mesg+1],theMeters[meter].curMonth);
+				s1=string(local);
+				drawString(64, 48, s1, 16, TEXT_ALIGN_CENTER,DISPLAYIT, REPLACE);
+				s1="";
+				xSemaphoreGive(I2CSem);
+			}
 		}
 		break;
 
 	case DISPLAYUSER:
-		sprintf(local,"Meter:%s ",aqui.meterName);
-		drawString(2, 14, string(local),10, TEXT_ALIGN_LEFT,NODISPLAY, REPLACE);
-		sprintf(local,"[Firmware %s]\n",(char*)compile_date);
-		drawString(2, 26, string(local),10, TEXT_ALIGN_LEFT,NODISPLAY, REPLACE);
-		sprintf(local,"BootCount %d",aqui.bootcount);
-		drawString(2, 38, string(local),10, TEXT_ALIGN_LEFT,NODISPLAY, REPLACE);
-		drawBars();
-		display.display();
+		if(xSemaphoreTake(I2CSem, portMAX_DELAY)) //
+		{
+			sprintf(local,"Meter:%s ",aqui.meterName);
+			drawString(2, 14, string(local),10, TEXT_ALIGN_LEFT,NODISPLAY, REPLACE);
+			sprintf(local,"[Firmware %s]\n",(char*)compile_date);
+			drawString(2, 26, string(local),10, TEXT_ALIGN_LEFT,NODISPLAY, REPLACE);
+			sprintf(local,"BootCount %d",aqui.bootcount);
+			drawString(2, 38, string(local),10, TEXT_ALIGN_LEFT,NODISPLAY, REPLACE);
+			drawBars();
+			display.display();
+			xSemaphoreGive(I2CSem);
+	}
 		break;
 
 	case DISPLAYALL:
@@ -536,11 +560,15 @@ void displayData(u8 meter)
 			else
 				lsize=16;
 			sprintf(local,"%5dp  %5dp  ",theMeters[0].currentBeat,theMeters[1].currentBeat);
-			drawString(64, 14, string(local),lsize, TEXT_ALIGN_CENTER,NODISPLAY, REPLACE);
-			sprintf(local,"%5dp  %5dw  ",theMeters[2].currentBeat,theMeters[3].currentBeat);
-			drawString(64, 34, string(local),lsize, TEXT_ALIGN_CENTER,NODISPLAY, REPLACE);
-			drawBars();
-			display.display();
+			if(xSemaphoreTake(I2CSem, portMAX_DELAY)) //
+			{
+				drawString(64, 16, string(local),lsize, TEXT_ALIGN_CENTER,NODISPLAY, REPLACE);
+				sprintf(local,"%5dp  %5dw  ",theMeters[2].currentBeat,theMeters[3].currentBeat);
+				drawString(64, 35, string(local),lsize, TEXT_ALIGN_CENTER,NODISPLAY, REPLACE);
+				drawBars();
+				display.display();
+				xSemaphoreGive(I2CSem);
+			}
 		}
 		break;
 
@@ -552,15 +580,21 @@ void displayData(u8 meter)
 			oldMetersK[2]=theMeters[2].curLife;
 			oldMetersK[3]=theMeters[3].curLife;
 			sprintf(local,"%5dK  %5dK  ",theMeters[0].curLife,theMeters[1].curLife);
-			drawString(64, 14, string(local),16, TEXT_ALIGN_CENTER,NODISPLAY, REPLACE);
-			sprintf(local,"%5dK  %5dK  ",theMeters[2].curLife,theMeters[3].curLife);
-			drawString(64, 34, string(local),16, TEXT_ALIGN_CENTER,NODISPLAY, REPLACE);
-			drawBars();
-			display.display();
+			if(xSemaphoreTake(I2CSem, portMAX_DELAY)) //
+			{
+				drawString(64, 14, string(local),16, TEXT_ALIGN_CENTER,NODISPLAY, REPLACE);
+				sprintf(local,"%5dK  %5dK  ",theMeters[2].curLife,theMeters[3].curLife);
+				drawString(64, 34, string(local),16, TEXT_ALIGN_CENTER,NODISPLAY, REPLACE);
+				drawBars();
+				display.display();
+				xSemaphoreGive(I2CSem);
+			}
 		}
 		break;
 
 	case DISPLAYAMPS:
+		if(xSemaphoreTake(I2CSem, portMAX_DELAY)) //
+					{
 		if(theMeters[0].msNow>0 && theMeters[1].msNow>0 )
 		{
 			sprintf(local,"%3dA  %3dA  ",(int)((float)(4500/theMeters[0].msNow)*2.624),(int)((float)(4500/theMeters[1].msNow)*2.624));
@@ -572,6 +606,8 @@ void displayData(u8 meter)
 		}
 		drawBars();
 		display.display();
+		xSemaphoreGive(I2CSem);
+				}
 		break;
 	default:
 		break;
@@ -657,11 +693,11 @@ void displayManager(void *arg) {
 	while (true) {
 		if(aqui.pollGroup)
 		{
-			if(xSemaphoreTake(I2CSem, portMAX_DELAY)) //
-			{
+//			if(xSemaphoreTake(I2CSem, portMAX_DELAY)) //
+//			{
 				displayData(chosenMeter);
-				xSemaphoreGive(I2CSem);
-			}
+//				xSemaphoreGive(I2CSem);
+//			}
 		}
 		vTaskDelay(100/portTICK_PERIOD_MS);
 	}

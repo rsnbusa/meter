@@ -523,21 +523,10 @@ esp_err_t mqtt_event_handler(esp_mqtt_event_handle_t event)
             break;
 
         case MQTT_EVENT_SUBSCRIBED:
-        	if(client==clientThing)
-        	{
-#ifdef DEBUGMQQT
-            	if(aqui.traceflag & (1<<MQTTD))
-            		printf( "[MQTTD]Subscribe ThingSpeak\n");
-#endif
-            	mqttThingf=true;
-        	}
-        	else{
-#ifdef DEBUGMQQT
             	if(aqui.traceflag & (1<<MQTTD))
             		printf("[MQTTD]Subscribed Cloud\n");
-#endif
             	mqttf=true;
-        		}
+
             break;
         case MQTT_EVENT_UNSUBSCRIBED:
 #ifdef DEBUGMQQT
@@ -874,11 +863,11 @@ esp_err_t wifi_event_handler(void *ctx, system_event_t *event) {
 		{
 			if(I2CSem)
 			{
-				if(xSemaphoreTake(I2CSem, portMAX_DELAY))
-				{
+//				if(xSemaphoreTake(I2CSem, portMAX_DELAY))
+//				{
 					setLogo("MeterIoT");
-					xSemaphoreGive(I2CSem);
-				}
+//					xSemaphoreGive(I2CSem);
+//				}
 			}
 			xTaskCreate(&mongooseTask, "mongooseTask", 10240, NULL, 5, NULL); //  web commands Interface controller
 			xTaskCreate(&initialize_sntp, "sntp", 2048, NULL, 3, NULL); //will get date
@@ -1072,11 +1061,6 @@ void initVars()
 		settings.buffer_size=2048;
 		settings.disable_clean_session=true;
 
-		settingsThing.host="mqtt.thingspeak.com";
-		settingsThing.port=1883;
-		settingsThing.event_handle = mqtt_event_handler;
-		settingsThing.user_context =(void*)"mqtt.thingspeak.com"; //name of server
-
 	strcpy(APP,"MeterIoT");
 	strcpy(aqui.mqtt,"m13.cloudmqtt.com");
 	strcpy(aqui.mqttUser,"wckwlvot");
@@ -1088,13 +1072,9 @@ void initVars()
 	sCollectionTopic=string(APP)+"/"+string(aqui.groupName)+"/"+string(aqui.meterName)+"/BILLING";
 	cmdTopic=string(APP)+"/"+string(aqui.groupName)+"/"+string(aqui.meterName)+"/CMD";
 
-//	bbuffer=(uint8_t*)pvPortMallocCaps(2200, MALLOC_CAP_DMA);
-	bbuffer=(uint8_t*)malloc(2200);
-//	memset(&mcount,0,sizeof(mcount));
 
-	GMAXLOSSPER=80;
 	strcpy(WHOAMI,"rsimpsonbusa@gmail.com");
-	strcpy(MQTTSERVER,"m11.cloudmqtt.com");
+	strcpy(MQTTSERVER,"m13.cloudmqtt.com");
 
 	strcpy(meses[0],"Ene");
 	strcpy(meses[1],"Feb");
@@ -1127,35 +1107,34 @@ void initVars()
 
 	strcpy((char*)&cmds[0].comando,"/mt_firmware");			cmds[0].code=set_FirmUpdateCmd;			//done...needs testing in a good esp32
 	strcpy((char*)&cmds[1].comando,"/mt_erase");			cmds[1].code=set_eraseConfig;			//done
-	strcpy((char*)cmds[2].comando,"/mt_httpstatus");		cmds[2].code=set_HttpStatus;			//done
-	strcpy((char*)cmds[3].comando,"/mt_status");			cmds[3].code=set_statusSend;			//done
-	strcpy((char*)cmds[4].comando,"/mt_reset");				cmds[4].code=set_reset;					//done
-	strcpy((char*)cmds[5].comando,"/mt_resetstats");		cmds[5].code=set_resetstats;			//done
-	strcpy((char*)cmds[6].comando,"/mt_rates");	 			cmds[6].code=set_rates;					//done
-	strcpy((char*)cmds[7].comando,"/mt_internal");			cmds[7].code=set_internal;				//done
-	strcpy((char*)cmds[8].comando,"/mt_email");				cmds[8].code=set_addEmail;				//done
-	strcpy((char*)cmds[9].comando,"/mt_getmonth");			cmds[9].code=set_getMonth;				//done
-	strcpy((char*)cmds[10].comando,"/mt_getday");			cmds[10].code=set_getDay;				//done
-	strcpy((char*)cmds[11].comando,"/mt_gethour");			cmds[11].code=set_getHour;				//done
-	strcpy((char*)cmds[12].comando,"/mt_getmonthall");		cmds[12].code=set_getMonthAll;			//done
-	strcpy((char*)cmds[13].comando,"/mt_getdayall");		cmds[13].code=set_getDayAll;			//done
-	strcpy((char*)cmds[14].comando,"/mt_getdaysinmonth");	cmds[14].code=set_getDaysInMonth;		//done
-	strcpy((char*)cmds[15].comando,"/mt_gethoursinday");	cmds[15].code=set_getHoursInDay;		//done
-	strcpy((char*)cmds[16].comando,"/mt_gethoursinmonth");	cmds[16].code=set_getHoursInMonth;		//done
-	strcpy((char*)cmds[17].comando,"/mt_getcycle");			cmds[17].code=set_getCycle;				//done
-	strcpy((char*)cmds[18].comando,"/mt_getcycledate");		cmds[18].code=set_getCycleDate;			//done
-	strcpy((char*)cmds[19].comando,"/mt_conection");		cmds[19].code=set_conection;			//done
-	strcpy((char*)cmds[20].comando,"/mt_displaymeter");		cmds[20].code=set_displayMeter;			//done
-	strcpy((char*)cmds[21].comando,"/mt_displaymanager");	cmds[21].code=set_displayManager;		//done
-	strcpy((char*)cmds[22].comando,"/mt_frammanager");		cmds[22].code=set_framManager;			//done
-	strcpy((char*)cmds[23].comando,"/mt_settings");			cmds[23].code=set_settingsStatus;		//free
-	strcpy((char*)cmds[24].comando,"/mt_payment");			cmds[24].code=set_payment;				//done
-	strcpy((char*)cmds[25].comando,"/mt_tariff");			cmds[25].code=set_tariff;				//done
-	strcpy((char*)cmds[26].comando,"/mt_generalap");		cmds[26].code=set_generalap;			//done
-	strcpy((char*)cmds[27].comando,"/mt_scan");				cmds[27].code=set_scanCmd;				//done
-	strcpy((char*)cmds[28].comando,"/mt_clearlog");			cmds[28].code=set_clearLog;				//done
-	strcpy((char*)cmds[29].comando,"/mt_readlog");			cmds[29].code=set_readlog;				//done
-	strcpy((char*)cmds[30].comando,"/mt_session");			cmds[30].code=set_session;				//done
+	strcpy((char*)cmds[2].comando,"/mt_status");			cmds[2].code=set_statusSend;			//done
+	strcpy((char*)cmds[3].comando,"/mt_reset");				cmds[3].code=set_reset;					//done
+	strcpy((char*)cmds[4].comando,"/mt_resetstats");		cmds[4].code=set_resetstats;			//done
+	strcpy((char*)cmds[5].comando,"/mt_rates");	 			cmds[5].code=set_rates;					//done
+	strcpy((char*)cmds[6].comando,"/mt_internal");			cmds[6].code=set_internal;				//done
+	strcpy((char*)cmds[7].comando,"/mt_email");				cmds[7].code=set_addEmail;				//done
+	strcpy((char*)cmds[8].comando,"/mt_getmonth");			cmds[8].code=set_getMonth;				//done
+	strcpy((char*)cmds[9].comando,"/mt_getday");			cmds[9].code=set_getDay;				//done
+	strcpy((char*)cmds[10].comando,"/mt_gethour");			cmds[10].code=set_getHour;				//done
+	strcpy((char*)cmds[11].comando,"/mt_getmonthall");		cmds[11].code=set_getMonthAll;			//done
+	strcpy((char*)cmds[12].comando,"/mt_getdayall");		cmds[12].code=set_getDayAll;			//done
+	strcpy((char*)cmds[13].comando,"/mt_getdaysinmonth");	cmds[13].code=set_getDaysInMonth;		//done
+	strcpy((char*)cmds[14].comando,"/mt_gethoursinday");	cmds[14].code=set_getHoursInDay;		//done
+	strcpy((char*)cmds[15].comando,"/mt_gethoursinmonth");	cmds[15].code=set_getHoursInMonth;		//done
+	strcpy((char*)cmds[16].comando,"/mt_getcycle");			cmds[16].code=set_getCycle;				//done
+	strcpy((char*)cmds[17].comando,"/mt_getcycledate");		cmds[17].code=set_getCycleDate;			//done
+	strcpy((char*)cmds[18].comando,"/mt_conection");		cmds[18].code=set_conection;			//done
+	strcpy((char*)cmds[19].comando,"/mt_displaymeter");		cmds[19].code=set_displayMeter;			//done
+	strcpy((char*)cmds[20].comando,"/mt_displaymanager");	cmds[20].code=set_displayManager;		//done
+	strcpy((char*)cmds[21].comando,"/mt_frammanager");		cmds[21].code=set_framManager;			//done
+	strcpy((char*)cmds[22].comando,"/mt_settings");			cmds[22].code=set_settingsStatus;		//free
+	strcpy((char*)cmds[23].comando,"/mt_payment");			cmds[23].code=set_payment;				//done
+	strcpy((char*)cmds[24].comando,"/mt_tariff");			cmds[24].code=set_tariff;				//done
+	strcpy((char*)cmds[25].comando,"/mt_generalap");		cmds[25].code=set_generalap;			//done
+	strcpy((char*)cmds[26].comando,"/mt_scan");				cmds[26].code=set_scanCmd;				//done
+	strcpy((char*)cmds[27].comando,"/mt_clearlog");			cmds[27].code=set_clearLog;				//done
+	strcpy((char*)cmds[28].comando,"/mt_readlog");			cmds[28].code=set_readlog;				//done
+	strcpy((char*)cmds[29].comando,"/mt_session");			cmds[29].code=set_session;				//done
 
 	METERS[0]=METER1;
 	METERS[1]=METER2;
@@ -1193,11 +1172,6 @@ void initVars()
     printf("Compile date %s\n",compile_date);
 
 	usertime=millis();
-
-//	memset(&opts, 0, sizeof(opts));
-//	opts.user_name =s_user_name ;
-//	opts.password = s_password;
-//	opts.keep_alive=0;
 
 	subf=false;
 

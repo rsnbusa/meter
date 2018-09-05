@@ -99,7 +99,7 @@
 #define ERRORCMD            			4
 
 #define HIDESSID            			false // used to received internal commands Strategy
-#define MAXCMDS             			31
+#define MAXCMDS             			30
 #define MAXDEVS             			4	//3 are electric Meters and 1 Water Meter
 #define MINELAPSEDAMPS      			100
 

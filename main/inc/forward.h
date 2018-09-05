@@ -2,7 +2,6 @@
 #define fw
 void set_FirmUpdateCmd(void *pArg);               // FOTA of latest firmware
 void set_eraseConfig(void *pArg);                // Erase everything. Back to local AP (192.168.4.1)
-void set_HttpStatus(void *pArg);                  // Send the general status of the HEater in HTML format via HTTP or MQTT
 void set_statusSend(void *pArg);                  // A general status condition for display. See routine for numbers.
 void set_reset(void *pArg);                       // Reboot
 void set_resetstats(void *pArg);                  // Clear log file and 0 Heater stats regarding power and water consumption

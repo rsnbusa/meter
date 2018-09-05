@@ -107,15 +107,6 @@ void set_internal(void * pArg){
 			goto sale;
 		}
 
-		state=getParameter(argument,"xxxx");
-		if(state!="")
-		{
-			minTime[meter]=maxTime[meter]=maxbeatTime[meter]=0;
-			minbeatTime[meter]=99999;
-			webstring+="Internal XXXX-";
-
-		}
-
 		state=getParameter(argument,"beats");
 		if(state!="")
 		{

@@ -328,12 +328,6 @@ void kbd(void *arg) {
 				for (int a=0;a<MAXDEVS;a++)
 				{
 					load_from_fram(a);
-			//		oldTime[a]=0;
-					minTime[a]=maxTime[a]=maxbeatTime[a]=0;
-					minbeatTime[a]=99999;
-		//			comofue[a]=0;
-			//		maxPower[a]=0.0;
-			//		msPower[a]=99999;
 					theMeters[a].beatSave=0;
 					theMeters[a].currentBeat=0;
 					theMeters[a].meterid=a;
@@ -629,6 +623,7 @@ void kbd(void *arg) {
 					printf("%d\n",hasta);
 
 					//fram.readMany(add,mpointer,tlen);
+					u8 *bbuffer=(uint8_t*)malloc(2200);
 					xSemaphoreTake(framSem, portMAX_DELAY);//portMAX_DELAY
 					fram.readMany(add,bbuffer,tlen);
 					xSemaphoreGive(framSem);//portMAX_DELAY
@@ -641,6 +636,7 @@ void kbd(void *arg) {
 					else
 						printf("No\n");
 					free(pattern);
+					free(bbuffer);
 				}
 				break;
 			case 'w':
