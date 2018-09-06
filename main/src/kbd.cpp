@@ -83,6 +83,8 @@ void kbd(void *arg) {
 	uint16_t errorcode,code1;
 	int total;
 	char lastcmd=10;
+	u8 *p;
+
 
 	uart_config_t uart_config = {
 			.baud_rate = 115200,
@@ -118,6 +120,11 @@ void kbd(void *arg) {
 		//	data[len]=0;
 			switch(data[0])
 			{
+			case'+':
+				printf("To dump core\n");
+				p=0;
+				*p=0;
+				break;
 			case '9':
 				printf("Water Pulses/Liter[%d]:",aqui.bounce[4]);
 				fflush(stdout);
