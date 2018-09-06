@@ -319,7 +319,7 @@ void kbd(void *arg) {
 					if(xSemaphoreTake(framSem, 1000))
 					{
 						if (data[0]=='y')
-							ret=fram.format(valor,ota_write_data,2000);
+							ret=fram.format(valor,ota_write_data,2000,false);
 						else
 							ret=fram.formatSlow(valor);
 						if(ret!=0)

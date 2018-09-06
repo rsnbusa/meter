@@ -29,7 +29,7 @@ void set_framManager(void * pArg){
 	{
 		printf("Format all %s\n",state.c_str());
 		xSemaphoreTake(framSem, portMAX_DELAY);//portMAX_DELAY
-		ret=fram.format(0,ota_write_data,2000);
+		ret=fram.format(0,ota_write_data,2000,true);
 		xSemaphoreGive(framSem);
 		if(ret!=0)
 		{

@@ -291,11 +291,12 @@ int FramSPI::writeMany (uint32_t framAddr, uint8_t *valores,uint32_t son)
 */
 
 
-int FramSPI::format(uint8_t valor, uint8_t *buffer,uint32_t len)
+int FramSPI::format(uint8_t valor, uint8_t *buffer,uint32_t len,bool all)
 {
 	uint32_t add=0;
 	int count=intframWords,ret;
-	//add=0;
+	if(!all)
+		count=TARIFADIA;
 	while (count>0)
 	{
 		if (count>len)

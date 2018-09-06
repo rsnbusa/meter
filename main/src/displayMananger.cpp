@@ -336,7 +336,7 @@ void drawPulses(int meter)
 	char textl[130];
 	if(xSemaphoreTake(I2CSem, portMAX_DELAY)) //
 	{
-
+		clearScreen();
 		drawString(64, 0, "Pulsos",24, TEXT_ALIGN_CENTER,NODISPLAY, NOREP);
 		sprintf(textl,"%d",aqui.MODDISPLAY[meter]);
 		drawString(102, 0, string(textl), 10, TEXT_ALIGN_LEFT, NODISPLAY, NOREP);

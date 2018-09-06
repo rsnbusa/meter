@@ -22,6 +22,12 @@ uint32_t IRAM_ATTR millis()
 	return xTaskGetTickCount() * portTICK_PERIOD_MS;
 }
 
+uint32_t IRAM_ATTR millisISR()
+{
+	return xTaskGetTickCountFromISR() * portTICK_PERIOD_MS;
+
+}
+
 void delay(uint16_t a)
 {
 	vTaskDelay(a /  portTICK_RATE_MS);
@@ -254,14 +260,13 @@ static void IRAM_ATTR gpio_isr_handler(void * arg)
 
 //	if(memchr(METERS,meter->elpin,4)!=NULL)
 //	{
-		u32 ahorita=xTaskGetTickCountFromISR();
 
 		if(meter->elpin==WATER)
 		{
-			if(ahorita-meter->lastKwHDate>1000)
-				meter->lastKwHDate=ahorita;
+			if(millisISR()-meter->lastKwHDate>1000)
+				meter->lastKwHDate=millisISR();
 			meter->curLife++;
-			meter->timestamp=ahorita;
+			meter->timestamp=millisISR();
 			meter->beatSave++;
 			meter->currentBeat++;
 
@@ -282,15 +287,15 @@ static void IRAM_ATTR gpio_isr_handler(void * arg)
 		}
 
 		taskENTER_CRITICAL_ISR(&myMutex);
-		u8 como=gpio_get_level((gpio_num_t)meter->elpin);
+		volatile u8 como=gpio_get_level((gpio_num_t)meter->elpin);
 		taskEXIT_CRITICAL_ISR(&myMutex);
 
 		if(!como)
 		{
-			fueron=ahorita-meter->timestamp;
+			fueron=millisISR()-meter->timestamp;
 			 if(fueron>aqui.bounce[meter->meterid])
 			 {
-				meter->timestamp=ahorita; //last valid isr
+				meter->timestamp=millisISR(); //last valid isr
 				meter->beatSave++;
 				meter->currentBeat++;
 				if((meter->currentBeat % meter->maxLoss)==0) //every GMAXLOSSPER interval

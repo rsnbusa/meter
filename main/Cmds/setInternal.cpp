@@ -174,7 +174,7 @@ void set_internal(void * pArg){
 	state=getParameter(argument,"zzzz");
 	if(state=="Y")
 	{
-		fram.format(0,ota_write_data,2000);
+		fram.format(0,ota_write_data,2000,true);
 		webstring+="Internal Format Fram";
 	}
 

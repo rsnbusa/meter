@@ -84,7 +84,7 @@ void show_config(u8 meter, bool full) // read flash and if HOW display Status me
 			//       print_log();
 		}
 
-		printf("[DispMgrTimer %d Resolution %d Beat@KwH %d]\n",aqui.DISPTIME,aqui.MODDISPLAY[meter],aqui.beatsPerKw[meter]);
+		printf("[DispMgrTimer %d Resolution %d Beat@KwH %d Bounce %d]\n",aqui.DISPTIME,aqui.MODDISPLAY[meter],aqui.beatsPerKw[meter],aqui.bounce[meter]);
 	//	printf("[Amps: Min %d (%s) Max %d (%s)]\n",minbeatTime[meter],makeDateString(minTime[meter]).c_str(),maxbeatTime[meter],makeDateString(maxTime[meter]).c_str());
 		time_t t;
 		float pago;
