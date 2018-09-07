@@ -555,13 +555,13 @@ uint16_t date2daysSPI(uint16_t y, uint8_t m, uint8_t d) {
 
 }
 
-int FramSPI::write_tarif_bytes(uint32_t add,uint8_t*  desde,uint32_t cuantos)
-{
-	int ret;
-	add+=BPH;
-	ret=writeMany(add,desde,cuantos);
-	return ret;
-}
+//int FramSPI::write_tarif_bytes(uint32_t add,uint8_t*  desde,uint32_t cuantos)
+//{
+//	int ret;
+//	add+=BPH;
+//	ret=writeMany(add,desde,cuantos);
+//	return ret;
+//}
 
 int FramSPI::read_tarif_bytes(uint32_t add,uint8_t*  donde,uint32_t cuantos)
 {
@@ -570,35 +570,35 @@ int FramSPI::read_tarif_bytes(uint32_t add,uint8_t*  donde,uint32_t cuantos)
 	return ret;
 }
 
-int FramSPI::read_tarif_bpw(uint8_t tarNum, uint8_t*  donde)
-{
-	int ret;
-	uint32_t add=tarNum*2;
-	ret=read_tarif_bytes(add,donde,2);
-	return ret;
-}
+//int FramSPI::read_tarif_bpw(uint8_t tarNum, uint8_t*  donde)
+//{
+//	int ret;
+//	uint32_t add=tarNum*2;
+//	ret=read_tarif_bytes(add,donde,2);
+//	return ret;
+//}
 
-int FramSPI::write_tarif_bpw(uint8_t tarNum, uint16_t valor)
-{
-	int ret;
-	uint32_t add=tarNum*2;
-	ret=write_tarif_bytes(add,(uint8_t* )&valor,2);
-	return ret;
-}
+//int FramSPI::write_tarif_bpw(uint8_t tarNum, uint16_t valor)
+//{
+//	int ret;
+//	uint32_t add=tarNum*2;
+//	ret=write_tarif_bytes(add,(uint8_t* )&valor,2);
+//	return ret;
+//}
 
 int FramSPI::read_tarif_day(uint16_t dia,uint8_t*  donde) //Read 24 Hours of current Day(0-365)
 {
 	int ret;
-	uint32_t add=TARIFADIA+dia*24;
-	ret=read_tarif_bytes(add,donde,24);
+	uint32_t add=TARIFADIA+dia*24*WORD;
+	ret=read_tarif_bytes(add,donde,24*WORD);
 	return ret;
 }
 
 int FramSPI::read_tarif_hour(uint16_t dia,uint8_t hora,uint8_t*  donde) //Read specific Hour in a Day. Day 0-30(31 days) and Hour 0-23
 {
 	int ret;
-	uint32_t add=TARIFADIA+dia*24+hora;
-	ret=read_tarif_bytes(add,donde,1);
+	uint32_t add=TARIFADIA+dia*24*WORD+hora;
+	ret=read_tarif_bytes(add,donde,WORD);
 	return ret;
 }
 

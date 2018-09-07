@@ -47,7 +47,7 @@ using namespace std;
  EXTERN	i2ctype 						i2cp;
  EXTERN nvs_handle 						nvshandle;
 
- EXTERN u8                  			diaTarifa[24];      // % of Meter tariff. Ex: 800 *120=(20% cheaper).
+ EXTERN u16                  			diaTarifa[24];      // % of Meter tariff. Ex: 800 *120=(20% cheaper).
 
  EXTERN displayModeType    				displayMode; //Displaymode when boot first time
  EXTERN struct rst_info   				*rtc_info; //Restart System variable. States Reason for reboot. Look first line for reasons
