@@ -172,6 +172,12 @@ bool FramSPI::begin(int MOSI, int MISO, int CLK, int CS,SemaphoreHandle_t *framS
 		else
 			printf("Cant allocate Fram Sem\n");
 
+		if(FINTARIFA>intframWords)
+		{
+			printf("Not enough space for Meter Definition %d vs %d required\n",intframWords,FINTARIFA);
+			return false;
+		}
+
 		int count=20;
 		uint8_t st;
 //Set it to writeable
@@ -679,6 +685,14 @@ int FramSPI::write_month(uint8_t medidor,uint8_t month,uint16_t value)
 	return ret;
 }
 
+int FramSPI::write_monthraw(uint8_t medidor,uint8_t month,uint16_t value)
+{
+	int ret;
+	uint32_t badd=MONTHRAW+month*WORD;
+	ret=write_bytes(medidor,badd,(uint8_t* )&value,WORD);
+	return ret;
+}
+
 int FramSPI::write_minamps(uint8_t medidor,uint16_t value)
 {
 	int ret;
@@ -720,11 +734,29 @@ int FramSPI::write_day(uint8_t medidor,uint16_t yearl,uint8_t month,uint8_t dia,
 	return ret;
 }
 
+int FramSPI::write_dayraw(uint8_t medidor,uint16_t yearl,uint8_t month,uint8_t dia,uint16_t value)
+{
+	int ret;
+	uint16_t days=date2daysSPI(yearl,month,dia);
+	uint32_t badd=DAYRAW+days*WORD;
+	ret=write_bytes(medidor,badd,(uint8_t* )&value,WORD);
+	return ret;
+}
+
 int FramSPI::write_hour(uint8_t medidor,uint16_t yearl,uint8_t month,uint8_t dia,uint8_t hora,uint8_t value)
 {
 	int ret;
 	uint16_t days=date2daysSPI(yearl,month,dia);
 	uint32_t badd=HOURSTART+(days*24)+hora;
+	ret=write_bytes(medidor,badd,(uint8_t* )&value,1);
+	return ret;
+}
+
+int FramSPI::write_hourraw(uint8_t medidor,uint16_t yearl,uint8_t month,uint8_t dia,uint8_t hora,uint8_t value)
+{
+	int ret;
+	uint16_t days=date2daysSPI(yearl,month,dia);
+	uint32_t badd=HOURRAW+(days*24)+hora;
 	ret=write_bytes(medidor,badd,(uint8_t* )&value,1);
 	return ret;
 }
@@ -808,6 +840,14 @@ int FramSPI::read_month(uint8_t medidor,uint8_t month,uint8_t*  value)
 	return ret;
 }
 
+int FramSPI::read_monthraw(uint8_t medidor,uint8_t month,uint8_t*  value)
+{
+	int ret;
+	uint32_t badd=MONTHRAW+month*WORD;
+	ret=read_bytes(medidor,badd,value,WORD);
+	return ret;
+}
+
 int FramSPI::read_day(uint8_t medidor,uint16_t yearl,uint8_t month,uint8_t dia,uint8_t*  value)
 {
 	int ret;
@@ -817,11 +857,28 @@ int FramSPI::read_day(uint8_t medidor,uint16_t yearl,uint8_t month,uint8_t dia,u
 	return ret;
 }
 
+int FramSPI::read_dayraw(uint8_t medidor,uint16_t yearl,uint8_t month,uint8_t dia,uint8_t*  value)
+{
+	int ret;
+	int days=date2daysSPI(yearl,month,dia);
+	uint32_t badd=DAYRAW+days*WORD;
+	ret=read_bytes(medidor,badd,value,WORD);
+	return ret;
+}
+
 int FramSPI::read_hour(uint8_t medidor,uint16_t yearl,uint8_t month,uint8_t dia,uint8_t hora,uint8_t*  value)
 {
 	int ret;
 	uint16_t days=date2daysSPI(yearl,month,dia);
 	uint32_t badd=HOURSTART+(days*24)+hora;
+	ret=read_bytes(medidor,badd,value,1);
+	return ret;
+}
+int FramSPI::read_hourraw(uint8_t medidor,uint16_t yearl,uint8_t month,uint8_t dia,uint8_t hora,uint8_t*  value)
+{
+	int ret;
+	uint16_t days=date2daysSPI(yearl,month,dia);
+	uint32_t badd=HOURRAW+(days*24)+hora;
 	ret=read_bytes(medidor,badd,value,1);
 	return ret;
 }

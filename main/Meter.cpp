@@ -274,8 +274,10 @@ static void IRAM_ATTR gpio_isr_handler(void * arg)
 							{
 								if(meter->beatSave>=aqui.beatsPerKw[4])
 								{ //One Liter has flowed
-									meter->saveit=true;
 									meter->beatSave=0;
+									meter->curHourRaw++; //do not save. Piggy back saving on next official save (abajo)
+									meter->curDayRaw++;
+									meter->curMonthRaw++;
 								}
 								else
 									meter->saveit=false;
@@ -297,16 +299,25 @@ static void IRAM_ATTR gpio_isr_handler(void * arg)
 			 {
 				meter->timestamp=millisISR(); //last valid isr
 				meter->beatSave++;
+				meter->beatSaveRaw++;
 				meter->currentBeat++;
 				if((meter->currentBeat % meter->maxLoss)==0) //every GMAXLOSSPER interval
 				{
+					meter->saveit=false;
+
+					if(meter->beatSaveRaw>=(meter->beatsPerkW))
+					{
+						meter->curHourRaw++;
+						meter->beatSaveRaw=0;
+					}
+
 					if(meter->beatSave>=(meter->beatsPerkW*diaTarifa[horag]/100))
 					{ //One kWh has occurred
 						meter->saveit=true;
 						meter->beatSave=0;
 					}
-					else
-						meter->saveit=false;
+
+
 					xQueueSendFromISR( isrQ,arg,&tasker );
 					if (tasker)
 						portYIELD_FROM_ISR();
@@ -1489,7 +1500,7 @@ void app_main(void)
 	initScreen();			// Screen
 	initRtc();				// RTC until we find out how to use the ESP32 with a Battery
 	init_fram();			// Fram Setup
-	printf("Beatstart %d Dataend %d Tarifadia %d FinTarifa %d\n",BEATSTART,DATAEND,TARIFADIA,FINTARIFA);
+//	printf("DataEnd %d TarifaDia %d Fintarifadia %d\n",DATAEND, TARIFADIA, FINTARIFA);
 	init_temp();			// Temperature sensors
 	init_log();				// Log file management
 

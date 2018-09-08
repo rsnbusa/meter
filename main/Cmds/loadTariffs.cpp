@@ -68,12 +68,12 @@ void set_tariff(void * pArg){
 	req_clean(req);
 	sprintf(textl,"Tariffs ended len %d status %d time %d",llevoHTTP,status,mile-mils);
 	algo=string(textl);
-	postLog(PAYLL,0,algo);
+//	postLog(PAYLL,0,algo);
 	loadDayBPK(yearDay);
 	sendResponse( argument->pComm,argument->typeMsg, algo,algo.length(),NOERROR,false,false);
 #ifdef DEBUGMQQT
 	if(aqui.traceflag & (1<<FRAMD))
-		printf("[FRAMD]Load Tariffs\n");
+		printf("[FRAMD]Loaded Tariffs\n");
 #endif
 	exit:
 	algo="";

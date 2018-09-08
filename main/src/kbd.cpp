@@ -319,7 +319,19 @@ void kbd(void *arg) {
 					if(xSemaphoreTake(framSem, 1000))
 					{
 						if (data[0]=='y')
-							ret=fram.format(valor,ota_write_data,2000,false);
+						{
+							uart_write_bytes((uart_port_t)uart_num,"All?",5);
+							do{
+								len = uart_read_bytes((uart_port_t)uart_num, (uint8_t*)data, sizeof(data),20);
+							} while (len==0);
+							printf("%c",data[0]);
+							fflush(stdout);
+							if(data[0]!='y')
+								ret=fram.format(valor,ota_write_data,2000,false);
+							else
+								ret=fram.format(valor,ota_write_data,2000,true);
+
+						}
 						else
 							ret=fram.formatSlow(valor);
 						if(ret!=0)

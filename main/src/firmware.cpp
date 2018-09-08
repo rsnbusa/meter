@@ -282,7 +282,7 @@ void set_FirmUpdateCmd(void *pArg)
 */
 	esp_ota_handle_t update_handle = 0 ;
 	const esp_partition_t *update_partition = NULL;
-
+	gpio_uninstall_isr_service();
 	printf("Starting OTA...\n");
 
 	const esp_partition_t *configured = esp_ota_get_boot_partition();

@@ -151,20 +151,25 @@ void check_date_change()
 			if(xSemaphoreTake(framSem, portMAX_DELAY))
 			{
 				fram.write_hour(a, yearg,oldMesg,oldDiag,oldHorag, theMeters[a].curHour);//write old one before init new
+				fram.write_hourraw(a, yearg,oldMesg,oldDiag,oldHorag, theMeters[a].curHourRaw);//write old one before init new
 				xSemaphoreGive(framSem);
 			}
 
 			theMeters[a].curHour=0; //init it
+			theMeters[a].curHourRaw=0;
 			u16 oldt=diaTarifa[oldHorag];
+
 			if (diag !=oldDiag)
-				loadDayBPK(diag); // load new day values for Tariffs
-			// calculate remaining Beats to convert to next Tarif IF different
-//			if(oldt!=diaTarifa[horag])
-//			{
-//				// different BPH. Calculate currentBeat[a]/dia24h[oldhorag]
-//				float perc=theMeters[a].currentBeat/dia24h[oldHorag];
-//				theMeters[a].currentBeat=(int)(perc*(float)dia24h[horag]);
-//			} //else keep counting in the same currentBeat
+				loadDayBPK(diag); // load new day values for Tariffs else use next hour
+
+			// calculate remaining Beats to convert to next Tariff IF different
+			if(oldt!=diaTarifa[horag])
+			{
+				u16 oldBeats=theMeters[a].beatsPerkW*diaTarifa[oldHorag]/100;
+				float oldTarRemain=(float)(theMeters[a].beatSave-oldBeats);
+				float perc=(float)oldTarRemain/(float)oldBeats;
+				theMeters[a].beatSave=(int)(perc*(float)(theMeters[a].beatsPerkW*diaTarifa[horag]/100));
+			} //else keep counting in the same fashion
 			oldHorag=horag;
 		}
 	}

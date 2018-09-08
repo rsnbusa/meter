@@ -15,11 +15,12 @@ extern void sendResponse(void* comm,int msgTipo,string que,int len,int errorcode
 extern string makeDateString(time_t t);
 extern void delay(uint16_t a);
 extern void postLog(int code, int code1, string que);
+extern void drawString(int x, int y, string que, int fsize, int align,displayType showit,overType erase);
 
 void set_reset(void * pArg){
 	arg *argument=(arg*)pArg;
 	string algo;
-
+	char textl[10];
 	if(!set_commonCmd(argument,false))
 		return;
 
@@ -41,7 +42,17 @@ void set_reset(void * pArg){
 		printf("reset\n");                  // A general status condition for display. See routine for numbers.
 #endif
 	postLog(RESETL,0,"Reset Requested");
-	delay(5000);
+	display.setColor(BLACK);
+	display.clear();
+	display.setColor(WHITE);
+	drawString(64, 0, "RESET",24, TEXT_ALIGN_CENTER,NODISPLAY, NOREP);
+	for (int a=5; a>0;a--)
+	{
+		sprintf(textl,"%d",a);
+		drawString(64,23,string(textl),24, TEXT_ALIGN_CENTER,NODISPLAY, REPLACE);
+		delay(1000);
+	}
+
 	esp_restart();
 	exit:
 	algo="";

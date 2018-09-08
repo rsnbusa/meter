@@ -32,8 +32,10 @@
 #define LIFEKWH             (BEATSTART+LONG)
 #define LIFEDATE            (LIFEKWH+LONG)
 #define MONTHSTART          (LIFEDATE+LONG)
-#define DAYSTART            (MONTHSTART+WORD*12)
-#define HOURSTART           (DAYSTART+WORD*366)
+#define MONTHRAW			(MONTHSTART+WORD*12)
+#define DAYSTART            (MONTHRAW+WORD*12)
+#define DAYRAW				(DAYSTART+WORD*12)
+#define HOURSTART           (DAYRAW+WORD*366)
 #define HOURRAW				(HOURSTART+366*24)
 #define MINASTART           (HOURRAW+366*24)
 #define MAXASTART           (MINASTART+WORD)
@@ -44,14 +46,9 @@
 #define MAXPOWER            (FECHACORTADO+LONG)
 #define MSPOWER             (MAXPOWER+LONG)
 #define TIMEPOWER           (MSPOWER+LONG)
-#define DATAEND             (TIMEPOWER+LONG)  // as of Apr 26/2017 size is 9648
+#define DATAEND             (TIMEPOWER+LONG)
 
-// Tarifacion
-// 366dias * 24 Horas de % Tarifacion por Hora
-//
-
-//#define BPH                 (DATAEND*MAXDEVSS+100+SCRATCH) // start of our tariff + 100 bytes to spare AVOID CONFLICT+SCRATCH
-#define TARIFADIA           (DATAEND*MAXDEVSS) // 100 Beats Per Hour tipos
-#define FINTARIFA           (TARIFADIA+366*24*WORD) // 366 dias * 24 horas *2
+#define TARIFADIA           (DATAEND*MAXDEVSS) // 1
+#define FINTARIFA           (TARIFADIA+366*24*WORD) // 366 dias * 24 horas *2 this is the whole area required
 
 #endif /* framDef_h */

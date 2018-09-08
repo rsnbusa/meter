@@ -72,8 +72,11 @@ void write_to_fram(u8 meter,bool adding)
 	fram.write_beat(meter,theMeters[meter].currentBeat);
 	fram.write_lifekwh(meter,theMeters[meter].curLife);
 	fram.write_month(meter,mesg,theMeters[meter].curMonth);
+	fram.write_monthraw(meter,mesg,theMeters[meter].curMonthRaw);
 	fram.write_day(meter,yearg,mesg,diag,theMeters[meter].curDay);
+	fram.write_dayraw(meter,yearg,mesg,diag,theMeters[meter].curDayRaw);
 	fram.write_hour(meter,yearg,mesg,diag,horag,theMeters[meter].curHour);
+	fram.write_hourraw(meter,yearg,mesg,diag,horag,theMeters[meter].curHourRaw);
     fram.write_cycle(meter, mesg,theMeters[meter].curCycle);
 //	fram.write_cycle(meter, theMeters[meter].cycleMonth,theMeters[meter].curCycle);
 	fram.write_minamps(meter,theMeters[meter].minamps);
@@ -95,8 +98,11 @@ void load_from_fram(u8 meter)
 		fram.read_lifekwh(meter,(u8*)&theMeters[meter].curLife);
 		fram.read_lifedate(meter,(u8*)&theMeters[meter].lastKwHDate);
 		fram.read_month(meter, mesg, (u8*)&theMeters[meter].curMonth);
+		fram.read_monthraw(meter, mesg, (u8*)&theMeters[meter].curMonthRaw);
 		fram.read_day(meter, yearg,mesg, diag, (u8*)&theMeters[meter].curDay);
+		fram.read_dayraw(meter, yearg,mesg, diag, (u8*)&theMeters[meter].curDayRaw);
 		fram.read_hour(meter, yearg,mesg, diag, horag, (u8*)&theMeters[meter].curHour);
+		fram.read_hourraw(meter, yearg,mesg, diag, horag, (u8*)&theMeters[meter].curHourRaw);
 		fram.read_cycle(meter, mesg, (u8*)&theMeters[meter].curCycle); //should we change this here too and use cycleMonth[meter]?????
 		fram.read_beat(meter,(u8*)&theMeters[meter].currentBeat);
 		theMeters[meter].oldbeat=theMeters[meter].currentBeat;
@@ -104,6 +110,7 @@ void load_from_fram(u8 meter)
 			aqui.beatsPerKw[meter]=800;// just in case div by 0 crash
 		u16 nada=theMeters[meter].currentBeat/aqui.beatsPerKw[meter];
 		theMeters[meter].beatSave=theMeters[meter].currentBeat-(nada*aqui.beatsPerKw[meter]);
+		theMeters[meter].beatSaveRaw=theMeters[meter].beatSave;
 		fram.read_minamps(meter,(u8*)&theMeters[meter].minamps);
 		fram.read_maxamps(meter,(u8*)&theMeters[meter].maxamps);
 		xSemaphoreGive(framSem);

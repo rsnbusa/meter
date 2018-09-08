@@ -98,15 +98,9 @@ void show_config(u8 meter, bool full) // read flash and if HOW display Status me
 			printf("Medidor Id[%d]=%s Born:%s Start %d Corte %d[%s]\nLifeBeat[%lu]-[%d] last %s\n",meter+1,aqui.medidor_id[meter],
 					makeDateString(aqui.bornDate[meter]).c_str(),aqui.bornKwh[meter],aqui.diaDeCorte[meter],aqui.corteSent[meter]?"t":"f",
 							ll,theMeters[meter].currentBeat,makeDateString(theMeters[meter].lastKwHDate).c_str());
-			printf("LifeKWH[%d] Month[%d]=%d Day[%d]=%d Hour[%d]=%d\n",theMeters[meter].curLife,mesg,theMeters[meter].curMonth,diag,
-					theMeters[meter].curDay,horag,theMeters[meter].curHour);
+			printf("LifeKWH[%d] Month[%d]=%d MRaw %d Day[%d]=%d DRaw %d Hour[%d]=%d HourRaw=%d\n",theMeters[meter].curLife,mesg,theMeters[meter].curMonth,theMeters[meter].curMonthRaw,diag,
+					theMeters[meter].curDay,theMeters[meter].curDayRaw,horag,theMeters[meter].curHour,theMeters[meter].curHourRaw);
 		}
 		printf("Pago $%.02f @ %s\n",pago,makeDateString(t).c_str());
 		printf("Working dates: Year %d Mes %d Day %d Hora %d day %d dayYear %d\n",yearg,mesg,diag,horag,daysg,yearDay);
 }
-
-
-
-
-
-

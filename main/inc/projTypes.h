@@ -18,8 +18,8 @@ typedef struct {
 	 u16 elpin;
 	 bool saveit;
 	 u32 msNow, minamps,maxamps;
-	 u16 curMonth,curDay,beatSave;
-	 u8 curHour,cycleMonth;
+	 u16 curMonth,curMonthRaw,curDay,curDayRaw,beatSave,beatSaveRaw;
+	 u8 curHour,cycleMonth,curHourRaw;
 	 u32 curLife,curCycle,lastKwHDate;
 	 u16 beatsPerkW,maxLoss;
 } meterType;
