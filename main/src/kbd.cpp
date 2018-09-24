@@ -365,22 +365,27 @@ void kbd(void *arg) {
 					break;
 			case 'l':
 				printf("Log:\n");
-				fseek(bitacora,0,SEEK_SET);
+				ret=fseek(bitacora,0,SEEK_SET);
+				if(ret<0)
+				{
+					printf("Log Seek error ");
+					break;
+				}
 				while(1)
 				{
 					//read date
-					add=fread(&t,1,4,bitacora);
-					if(add==0)
+					ret=fread(&t,1,4,bitacora);
+					if(ret<4)
 						break;
 					//read code
-					add=fread(&errorcode,1,2,bitacora);
-					if(add==0)
+					ret=fread(&errorcode,1,2,bitacora);
+					if(ret<2)
 						break;
-					add=fread(&code1,1,2,bitacora);
-					if(add==0)
+					ret=fread(&code1,1,2,bitacora);
+					if(ret<2)
 						break;
-					add=fread(&textl,1,20,bitacora);
-					if(add==0)
+					ret=fread(&textl,1,20,bitacora);
+					if(ret==0)
 						{printf("Could not read text log\n");
 						break;
 						};

@@ -10,7 +10,7 @@ void postLog(int code, int code1, string que)
 	logq mensaje;
 	mensaje.code=code;
 	mensaje.code1=code1;
-	memcpy(&mensaje.quedice,que.c_str(),MIN(que.length(),19));
+	memcpy(&mensaje.quedice,que.c_str(),MIN(que.length(),20));
 	mensaje.quedice[que.length()]=0;
 
 	if(logSem)
@@ -32,6 +32,8 @@ void logManager(void *pArg)
 {
 	logq mensaje;
 	time_t t;
+	int ret;
+
 	if(loggf)
 	{
 	while(1)
@@ -42,7 +44,11 @@ void logManager(void *pArg)
 			{
 				time(&t);
 
-				fseek(bitacora,0,SEEK_END);
+				ret=fseek(bitacora,0,SEEK_END);
+				if(ret<0)
+					printf("Error Seek Log %d\n",ret);
+				else
+				{
 				//write date
 				int wr=fwrite(&t,1,4,bitacora);
 				if(wr!=4)
@@ -57,14 +63,15 @@ void logManager(void *pArg)
 					printf("Failedw log code1\n");
 				wr=fwrite(&mensaje.quedice,1,20,bitacora);
 				if(wr!=20)
-					printf("Fialedw text\n");
+					printf("Failedw text\n");
 
 				if(aqui.traceflag & (1<<CMDD))
-					printf("[CMDD]To write date %s code %d code1 %d\n",makeDateString(t).c_str(),mensaje.code,mensaje.code1);
+					printf("[CMDD]Log date %s code %d code1 %d\n",makeDateString(t).c_str(),mensaje.code,mensaje.code1);
 
-				fclose(bitacora);
-				if(errno!=ENOMEM)
-					bitacora = fopen("/spiflash/log.txt", "r+");
+				fflush(bitacora);
+//				if(errno!=ENOMEM)
+//					bitacora = fopen("/spiflash/log.txt", "r+");
+				}
 			}
 		}
 		else

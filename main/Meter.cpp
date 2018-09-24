@@ -951,7 +951,7 @@ esp_err_t wifi_event_handler(void *ctx, system_event_t *event) {
 #ifdef DEBUGMQQT
 		if(aqui.traceflag & (1<<WIFID))
 			printf("[WIFID]Connected SSID[%d]=%s\n",curSSID,aqui.ssid[curSSID]);
-		postLog(WIFIL,0,"Connected");
+		postLog(WIFIL,curSSID,"Connected");
 #endif
 		aqui.lastSSID=curSSID;
 		write_to_flash();
@@ -1073,7 +1073,7 @@ void initVars()
 		settings.password=aqui.mqttPass;
 		settings.event_handle = mqtt_event_handler;
 		settings.user_context =aqui.mqtt; //name of server
-		settings.transport=0?MQTT_TRANSPORT_OVER_SSL:MQTT_TRANSPORT_OVER_TCP;
+		settings.transport=aqui.ssl?MQTT_TRANSPORT_OVER_SSL:MQTT_TRANSPORT_OVER_TCP;
 		settings.buffer_size=2048;
 		settings.disable_clean_session=true;
 
@@ -1081,8 +1081,6 @@ void initVars()
 	strcpy(aqui.mqtt,"m13.cloudmqtt.com");
 	strcpy(aqui.mqttUser,"wckwlvot");
 	strcpy(aqui.mqttPass,"MxoMTQjeEIHE");
-	aqui.mqttport=18747;
-
 	//Set up Mqtt Variables
 	spublishTopic=string(APP)+"/"+string(aqui.groupName)+"/"+string(aqui.meterName)+"/MSG";
 	sCollectionTopic=string(APP)+"/"+string(aqui.groupName)+"/"+string(aqui.meterName)+"/BILLING";

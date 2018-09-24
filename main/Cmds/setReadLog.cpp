@@ -19,6 +19,8 @@ void set_readlog(void * pArg){
 	arg *argument=(arg*)pArg;
 	char *buffer;
 	string algo;
+	int ret;
+
 
 	if(argument->typeMsg!=1)
 	{
@@ -37,7 +39,14 @@ void set_readlog(void * pArg){
 	}
 
 	//limit the size of the output to MAXHTTP
-	fseek (bitacora , 0 , SEEK_END);
+	ret=fseek (bitacora , 0 , SEEK_END);
+	if(ret<0)
+	{
+		algo="Internal Error";
+			sendResponse( argument->pComm,argument->typeMsg, algo,algo.length(),ERRORAUTH,false,false);            // send to someone's browser when asked
+			goto exit;
+	}
+
 	int lSize;
 	lSize=ftell (bitacora);
 	rewind (bitacora);
@@ -49,8 +58,6 @@ void set_readlog(void * pArg){
 	}
 
 	lSize+=4; //2 for code and 2 for centinel
-
-
 
 //use spare buffer from ota. Malloc can not be later freed before mqtt ends message which is unknown time
 
@@ -72,10 +79,4 @@ void set_readlog(void * pArg){
 		printf("[CMDD]readLog\n");
 
 	exit:algo="";
-//	if(argument->typeMsg){
-//		cJSON_Delete(argument->theRoot);
-////		cJSON_free(argument->theRoot);
-//	}
-//	free(pArg);
-//	vTaskDelete(NULL);
 }
