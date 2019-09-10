@@ -466,6 +466,8 @@ void displayData(u8 meter)
 	string s1,s2;
 	u32 oldMeters[MAXDEVS],oldMetersK[MAXDEVS];
 	u8 lsize=16;
+	wifi_ap_record_t wifidata;
+	static u32 lastRSSI=0;
 
 	if (displayMode==DISPLAYUSER)
 		if(millis()-usertime>10000)
@@ -489,6 +491,7 @@ void displayData(u8 meter)
 		case DISPLAYAMPS:
 		case DISPLAYUSER:
 		case DISPLAYALLK:
+		case DISPLAYRSSI:
 			drawPulsesAll();
 			break;
 		default:
@@ -587,7 +590,7 @@ void displayData(u8 meter)
 			sprintf(local,"%5dK  %5dK  ",theMeters[0].curLife,theMeters[1].curLife);
 			if(xSemaphoreTake(I2CSem, portMAX_DELAY)) //
 			{
-				drawString(64, 14, string(local),16, TEXT_ALIGN_CENTER,NODISPLAY, REPLACE);
+				drawString(64, 16, string(local),16, TEXT_ALIGN_CENTER,NODISPLAY, REPLACE);
 				sprintf(local,"%5dK  %5dK  ",theMeters[2].curLife,theMeters[3].curLife);
 				drawString(64, 34, string(local),16, TEXT_ALIGN_CENTER,NODISPLAY, REPLACE);
 				drawBars();
@@ -614,6 +617,24 @@ void displayData(u8 meter)
 		xSemaphoreGive(I2CSem);
 				}
 		break;
+	case DISPLAYRSSI:
+		if((millis()-lastRSSI)>1000)
+		{
+			lastRSSI=millis();
+
+			if (esp_wifi_sta_get_ap_info(&wifidata)==0){
+				if(aqui.traceflag & (1<<CMDD))
+				 printf("[CMDD]RSSI %d\n",wifidata.rssi);
+				if(xSemaphoreTake(I2CSem, portMAX_DELAY)) //
+				{
+					sprintf(local,"RSSI %d",wifidata.rssi);
+					drawString(64,18, string(local),24, TEXT_ALIGN_CENTER,NODISPLAY, REPLACE);
+				xSemaphoreGive(I2CSem);
+				}
+			}
+		}
+		break;
+
 	default:
 		break;
 	}
