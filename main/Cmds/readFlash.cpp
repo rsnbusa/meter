@@ -6,6 +6,7 @@
  */
 
 #include "readFlash.h"
+extern float DS_get_temp(DS18B20_Info * cual);
 
 string makeDateString(time_t t)
 {
@@ -40,7 +41,7 @@ void show_config(u8 meter, bool full) // read flash and if HOW display Status me
 		if(full)
 		{
 			printf ("Last Compile %s-%s\n",__DATE__,__TIME__);
-			//	printf("Temp:%.02fC\n",DS_get_temp());
+				printf("Temp:%.02fC\n",DS_get_temp(ds18b20_info));
 
 			if(aqui.centinel==CENTINEL)
 				printf("Valid Centinel. ");

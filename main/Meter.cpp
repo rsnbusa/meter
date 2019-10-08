@@ -46,6 +46,19 @@ void datacallback(esp_mqtt_client_handle_t self, esp_mqtt_event_handle_t event)
 
 }
 
+float DS_get_temp(DS18B20_Info * cual)
+{
+    ds18b20_convert_all(owb);
+    ds18b20_wait_for_conversion(ds18b20_info);
+    float dtemp;
+    DS18B20_ERROR err= ds18b20_read_temp(cual, &dtemp);
+    if(err)
+    	return -1;
+    else
+    return dtemp;
+}
+
+
 void get_meter_name()
 {
 	char local[20];
@@ -413,6 +426,12 @@ void interruptTask(void* pvParameter)
 		io_conf.pin_bit_mask = (mask<<METERS[a]);
 		gpio_config(&io_conf);
 		gpio_isr_handler_add((gpio_num_t)METERS[a], gpio_isr_handler,(void*)&theMeters[a]);
+#ifdef DEBUGMQQT
+
+	if(aqui.traceflag & (1<<BOOTD))
+		printf("[BOOTD]Meter %d curBeat %d BPK %d SaveC %d Tariff %d CurLife %d\n",theMeters[a].meterid,theMeters[a].currentBeat,theMeters[a].beatsPerkW,theMeters[a].maxLoss,
+				diaTarifa[horag],theMeters[a].curLife);
+#endif
 	}
 	for(int a=0;a<MAXDEVS;a++)
 		gpio_intr_enable(METERS[a]);
@@ -582,7 +601,6 @@ esp_err_t mqtt_event_handler(esp_mqtt_event_handle_t event)
             break;
         default:
         	break;
-
     }
     return ESP_OK;
 }
@@ -670,7 +688,7 @@ void mongooseTask(void *data) {
 
 } // mongooseTask
 
-
+/*
 void mdnstask(void *args){
 	char textl[60];
 	time_t now;
@@ -685,8 +703,8 @@ void mdnstask(void *args){
 		}
 		else
 		{
-	//		if(aqui.traceflag&(1<<CMDD))
-	//			printf("[CMDD]MDNS hostname %s\n",AP_NameString.c_str());
+			if(aqui.traceflag&(1<<CMDD))
+				printf("[CMDD]MDNS hostname %s\n",AP_NameString.c_str());
 			mdns_hostname_set(AP_NameString.c_str()) ;
 			mdns_instance_name_set(AP_NameString.c_str()) ;
 
@@ -699,15 +717,15 @@ void mdnstask(void *args){
 
 			sprintf(textl,"%d/%d/%d %d:%d:%d",1900+timeinfo.tm_year,timeinfo.tm_mon,timeinfo.tm_mday,timeinfo.tm_hour,timeinfo.tm_min,timeinfo.tm_sec);
 
-		//	if(aqui.traceflag&(1<<CMDD))
-		//		printf("[CMDD]MDNS time %s\n",textl);
+			if(aqui.traceflag&(1<<CMDD))
+				printf("[CMDD]MDNS time %s\n",textl);
 			string s=string(textl);
-			ret=mdns_service_add( AP_NameString.c_str(),"_heaterIoT", "_tcp", 80,serviceTxtData, 4 );
-	//		if(ret && (aqui.traceflag&(1<<CMDD)))
-		//					printf("Failed add service  %d\n",ret);
-			ret=mdns_service_txt_item_set("_heaterIoT", "_tcp", "Boot", s.c_str());
-		//	if(ret && (aqui.traceflag&(1<<CMDD)))
-			//				printf("Failed add txt %d\n",ret);
+			ret=mdns_service_add( AP_NameString.c_str(),"_meterIoT", "_tcp", 80,serviceTxtData, 4 );
+			if(ret && (aqui.traceflag&(1<<CMDD)))
+							printf("Failed add service  %d\n",ret);
+			ret=mdns_service_txt_item_set("_meterIoT", "_tcp", "Boot", s.c_str());
+			if(ret && (aqui.traceflag&(1<<CMDD)))
+							printf("Failed add txt %d\n",ret);
 		//	query_mdns_service(mdns, "_http", 0);
 
 			s="";
@@ -715,11 +733,11 @@ void mdnstask(void *args){
 
 	vTaskDelete(NULL);
 }
+*/
 
 void initialize_sntp(void *args)
 {
-	 struct timeval tvStart;
-//	struct tm mitime;
+	struct timeval tvStart;
 	sntp_setoperatingmode(SNTP_OPMODE_POLL);
 	sntp_setservername(0, (char*)"pool.ntp.org");
 	sntp_init();
@@ -769,8 +787,8 @@ void initialize_sntp(void *args)
 	timef=1;
 	postLog(BOOTL,aqui.bootcount,"Boot");
 
-	if(!mdnsf)
-		xTaskCreate(&mdnstask, "mdns", 4096, NULL, 5, NULL); //Ota Interface Controller
+//	if(!mdnsf)
+//		xTaskCreate(&mdnstask, "mdns", 4096, NULL, 5, NULL); //Ota Interface Controller
 	//release this task
 	vTaskDelete(NULL);
 }
@@ -808,19 +826,17 @@ void newSSID(void *pArg)
 		}
 #ifdef DEBUGMQQT
 	if(aqui.traceflag & (1<<WIFID))
-			printf("[WIFID]Try SSID =%s= %d %d\n",temp.c_str(),cual,len);
+			printf("[WIFID]Try SSID =%s= %d %d -%s-\n",temp.c_str(),cual,len,aqui.pass[curSSID]);
 #endif
 		ESP_ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_STA));
 
 	temp=string(aqui.ssid[cual]);
-	len=temp.length();
-	memcpy((void*)sta_config.sta.ssid,temp.c_str(),len);
-	sta_config.sta.ssid[len]=0;
-	temp=string(aqui.pass[cual]);
-	len=temp.length();
-	memcpy((void*)sta_config.sta.password,temp.c_str(),len);
+	strcpy(sta_config.sta.ssid,temp.c_str());
+	temp=string(aqui.pass[curSSID]);
+	if(temp.length()<8)
+		printf("Password less than 8 chars. Will fail\n");
+	strcpy(sta_config.sta.password,temp.c_str());
 	sta_config.sta.bssid_set=0;
-	sta_config.sta.password[len]=0;
 	ESP_ERROR_CHECK(esp_wifi_set_config(WIFI_IF_STA, &sta_config));
 	esp_wifi_start(); //if error try again indefinitly
 
@@ -839,7 +855,7 @@ esp_err_t wifi_event_handler(void *ctx, system_event_t *event) {
 	if(aqui.traceflag & (1<<WIFID))
 		printf("[WIFID]Wifi Handler %d\n",event->event_id);
 #endif
-    mdns_handle_system_event(ctx, event);
+ //   mdns_handle_system_event(ctx, event);
 
 	//delay(100);
 	switch(event->event_id)
@@ -998,12 +1014,18 @@ void initWiFi(void *pArg)
 	if (aqui.ssid[curSSID][0]!=0)
 	{
 		ESP_ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_STA));
-		temp=string(aqui.ssid[curSSID]);
-		len=temp.length();
-		memcpy(sta_config.sta.ssid,temp.c_str(),len+1);
+		string temp=string(aqui.ssid[curSSID]);
+		strcpy(sta_config.sta.ssid,temp.c_str());
 		temp=string(aqui.pass[curSSID]);
-		len=temp.length();
-		memcpy(sta_config.sta.password,temp.c_str(),len+1);
+		if(temp.length()<8)
+			printf("Password less than 8 chars. Will fail\n");
+		strcpy(sta_config.sta.password,temp.c_str());
+		sta_config.sta.bssid_set=0;
+#ifdef DEBUGMQQT
+		if(aqui.traceflag & (1<<BOOTD))
+			printf("[BOOTD]SSID %s Pass %s\n",aqui.ssid[curSSID],aqui.pass[curSSID]);
+#endif
+
 		ESP_ERROR_CHECK(esp_wifi_set_config(ESP_IF_WIFI_STA, &sta_config));
 	}
 
@@ -1012,10 +1034,8 @@ void initWiFi(void *pArg)
 		ESP_ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_APSTA));
 		esp_wifi_get_mac(ESP_IF_WIFI_STA, (u8*)&mac);
 		sprintf(textl,"MeterIoT%02x%02x",mac[6],mac[7]);
-		memcpy(configap.ap.ssid,textl,12);
-		memcpy(configap.ap.password,"csttpstt\0",9);
-		configap.ap.ssid[12]=0;
-		configap.ap.password[9]=0;
+		strcpy(configap.ap.ssid,textl);
+		strcpy(configap.ap.password,"csttpstt");
 		configap.ap.ssid_len=0;
 		configap.ap.authmode=WIFI_AUTH_WPA_PSK;
 		configap.ap.ssid_hidden=false;
@@ -1059,26 +1079,26 @@ void initVars()
 	//We do it this way so we can have a single global.h file with EXTERN variables(when not main app)
 	// and be able to compile routines in an independent file
 
-		uint16_t a=esp_random();
-		sprintf(textl,"meter%04d",a);
-		idd=string(textl);
+	uint16_t a=esp_random();
+	sprintf(textl,"meter%04d",a);
+	idd=string(textl);
 #ifdef DEBUGMQQT
 		if(aqui.traceflag & (1<<BOOTD))
 			printf("[BOOTD]Id %s\n",textl);
 #endif
 		// Water max Loss
-		maxw=aqui.bounce[4]/10;
+	maxw=aqui.bounce[4]/10;
 
-		settings.host=aqui.mqtt;
-		settings.port = aqui.mqttport;
-		settings.client_id=strdup(idd.c_str());
-		settings.username=aqui.mqttUser;
-		settings.password=aqui.mqttPass;
-		settings.event_handle = mqtt_event_handler;
-		settings.user_context =aqui.mqtt; //name of server
-		settings.transport=aqui.ssl?MQTT_TRANSPORT_OVER_SSL:MQTT_TRANSPORT_OVER_TCP;
-		settings.buffer_size=2048;
-		settings.disable_clean_session=true;
+	settings.host=aqui.mqtt;
+	settings.port = aqui.mqttport;
+	settings.client_id=strdup(idd.c_str());
+	settings.username=aqui.mqttUser;
+	settings.password=aqui.mqttPass;
+	settings.event_handle = mqtt_event_handler;
+	settings.user_context =aqui.mqtt; //name of server
+	settings.transport=aqui.ssl?MQTT_TRANSPORT_OVER_SSL:MQTT_TRANSPORT_OVER_TCP;
+	settings.buffer_size=2048;
+	settings.disable_clean_session=true;
 
 	strcpy(APP,"MeterIoT");
 	strcpy(aqui.mqtt,"m13.cloudmqtt.com");
@@ -1446,6 +1466,33 @@ int init_log()
 }
 
  */
+
+void init_temp()
+{
+
+	  owb = owb_rmt_initialize(&rmt_driver_info, DSPIN, RMT_CHANNEL_1, RMT_CHANNEL_0);
+	  owb_use_crc(owb, true);  // enable CRC check for ROM code
+
+	     numsensors = 0;
+	       OneWireBus_ROMCode rom_code;
+	        owb_status status = owb_read_rom(owb, &rom_code);
+	        if (status == OWB_STATUS_OK)
+	        {
+	            char rom_code_s[OWB_ROM_CODE_STRING_LENGTH];
+	            owb_string_from_rom_code(rom_code, rom_code_s, sizeof(rom_code_s));
+	            printf("Single device %s present\n", rom_code_s);
+	            ds18b20_info = ds18b20_malloc();
+	            ds18b20_init_solo(ds18b20_info, owb);
+	            ds18b20_use_crc(ds18b20_info, true);           // enable CRC check for temperature readings
+	            ds18b20_set_resolution(ds18b20_info, DS18B20_RESOLUTION_12_BIT);
+	        }
+	        float tt=DS_get_temp(ds18b20_info);
+	        printf("Temp %.1f\n",tt);
+	        numsensors=1;
+
+
+}
+/*
 void init_temp()
 {
 	//Temp sensors
@@ -1469,6 +1516,7 @@ void init_temp()
 #endif
 
 }
+*/
 
 void app_main(void)
 {

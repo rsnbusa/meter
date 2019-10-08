@@ -29,6 +29,8 @@ extern "C"{
 #include "mongoose.h"
 #include "sdkconfig.h"
 #include "ds18b20.h"
+#include "owb.h"
+#include "owb_rmt.h"
 #include "driver/uart.h"
 #include "driver/i2c.h"
 #include "driver/adc.h"

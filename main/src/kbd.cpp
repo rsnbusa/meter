@@ -14,6 +14,8 @@ extern void write_to_flash();
 extern void write_to_fram(u8 meter,bool adding);
 extern string makeDateString(time_t t);
 extern void delay(uint16_t a);
+extern float DS_get_temp(DS18B20_Info * cual);
+
 /*
 void test_write(int add, uint8_t valor,int len)
 {
@@ -468,21 +470,8 @@ void kbd(void *arg) {
 				}
 
 			case 'T':{
-				printf("Temp Sensor #:");
-				fflush(stdout);
-				do{
-					len = uart_read_bytes((uart_port_t)uart_num, (uint8_t*)data, sizeof(data),20);
-				} while(len==0);
-				add=atoi(data);
-				if (add>=numsensors)
-				{
-					printf("Out of range[0-%d]\n",numsensors-1);
-					break;
-				}
-				printf("%d\nId=",add);
-				for (int a=0;a<8;a++)
-					printf("%02x",sensors[add][a]);
-				printf(" Temp: %0.1f\n",DS_get_temp(&sensors[add][0]));
+				 float tt=DS_get_temp(ds18b20_info);
+					        printf("Temp %.1f\n",tt);
 				break;}
 			case 'c':{
 				for (int a=0;a<MAXDEVS;a++)

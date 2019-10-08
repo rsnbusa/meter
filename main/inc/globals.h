@@ -109,4 +109,7 @@ using namespace std;
  EXTERN adc_atten_t 					atten;
  EXTERN meterType 						theMeters[MAXDEVS];
  EXTERN TimerHandle_t					hourChange;
+ EXTERN OneWireBus 						* owb;
+ EXTERN owb_rmt_driver_info 			rmt_driver_info;
+ EXTERN DS18B20_Info 					* ds18b20_info;
 #endif /* MAIN_GLOBALS_H_ */

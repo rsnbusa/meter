@@ -1,285 +1,497 @@
 /*
-
-    This program is free software: you can redistribute it and/or modify
-    it under the terms of the GNU General Public License as published by
-    the Free Software Foundation, either version 3 of the License, or
-    (at your option) any later version.
-
-    This program is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-    GNU General Public License for more details.
-
-    You should have received a copy of the GNU General Public License
-     along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * MIT License
+ *
+ * Copyright (c) 2017-2019 David Antliff
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in all
+ * copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+ * SOFTWARE.
  */
+
+/**
+ * @file ds18b20.c
+ *
+ * Resolution is cached in the DS18B20_Info object to avoid querying the hardware
+ * every time a temperature conversion is required. However this can result in the
+ * cached value becoming inconsistent with the hardware value, so care must be taken.
+ *
+ */
+
+#include <stddef.h>
+#include <string.h>
+#include <stdlib.h>
+#include <stdbool.h>
+#include <stdint.h>
+#include <math.h>
+
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
-#include "esp_system.h"
 #include "driver/gpio.h"
-#include "rom/ets_sys.h"
+#include "esp_system.h"
+#include "esp_log.h"
+
 #include "ds18b20.h"
-#include "string.h"
+#include "owb.h"
 
-#define SKIPROM		0xCC
-#define SEARCHROM	0xF0
-#define READROM		0x33
-#define MATCHROM	0x55
-#define ALARMSEARCH	0xEC
-#define CONVERT		0x44
-#define WRITESCR	0x4E
-#define READSCR		0xBE
-#define COPYSCR		0x48
-#define RECALLE		0xB8
-#define READPWR		0xB4
+static const char * TAG = "ds18b20";
+static const int T_CONV = 750;   // maximum conversion time at 12-bit resolution in milliseconds
 
-int DS_GPIO;
-bool init=false;
-int wtime=750;
-uint8_t param;
-uint8_t romid[8];
+// Function commands
+#define DS18B20_FUNCTION_TEMP_CONVERT       0x44
+#define DS18B20_FUNCTION_SCRATCHPAD_WRITE   0x4E
+#define DS18B20_FUNCTION_SCRATCHPAD_READ    0xBE
+#define DS18B20_FUNCTION_SCRATCHPAD_COPY    0x48
+#define DS18B20_FUNCTION_EEPROM_RECALL      0xB8
+#define DS18B20_FUNCTION_POWER_SUPPLY_READ  0xB4
 
-int romsearch( uint8_t diff, uint8_t *id)
+/// @cond ignore
+typedef struct
 {
-	uint8_t i, j, next_diff;
-	uint8_t b;
+    uint8_t temperature[2];    // [0] is LSB, [1] is MSB
+    uint8_t trigger_high;
+    uint8_t trigger_low;
+    uint8_t configuration;
+    uint8_t reserved[3];
+    uint8_t crc;
+} Scratchpad;
+/// @endcond ignore
 
-	if( !  RST_PULSE())
-		return -1; // error, no device found
+static void _init(DS18B20_Info * ds18b20_info, const OneWireBus * bus)
+{
+    if (ds18b20_info != NULL)
+    {
+        ds18b20_info->bus = bus;
+        memset(&ds18b20_info->rom_code, 0, sizeof(ds18b20_info->rom_code));
+        ds18b20_info->use_crc = false;
+        ds18b20_info->resolution = DS18B20_RESOLUTION_INVALID;
+        ds18b20_info->solo = false;   // assume multiple devices unless told otherwise
+        ds18b20_info->init = true;
+    }
+    else
+    {
+        ESP_LOGE(TAG, "ds18b20_info is NULL");
+    }
+}
 
-	dsend_byte(SEARCHROM);// ROM search command
-	next_diff = 0; // unchanged on last device
+static bool _is_init(const DS18B20_Info * ds18b20_info)
+{
+    bool ok = false;
+    if (ds18b20_info != NULL)
+    {
+        if (ds18b20_info->init)
+        {
+            // OK
+            ok = true;
+        }
+        else
+        {
+            ESP_LOGE(TAG, "ds18b20_info is not initialised");
+        }
+    }
+    else
+    {
+        ESP_LOGE(TAG, "ds18b20_info is NULL");
+    }
+    return ok;
+}
 
-	i = 64; // 8 bytes
+static bool _address_device(const DS18B20_Info * ds18b20_info)
+{
+    bool present = false;
+    if (_is_init(ds18b20_info))
+    {
+        owb_reset(ds18b20_info->bus, &present);
+        if (present)
+        {
+            if (ds18b20_info->solo)
+            {
+                // if there's only one device on the bus, we can skip
+                // sending the ROM code and instruct it directly
+                owb_write_byte(ds18b20_info->bus, OWB_ROM_SKIP);
+            }
+            else
+            {
+                // if there are multiple devices on the bus, a Match ROM command
+                // must be issued to address a specific slave
+                owb_write_byte(ds18b20_info->bus, OWB_ROM_MATCH);
+                owb_write_rom_code(ds18b20_info->bus, ds18b20_info->rom_code);
+            }
+        }
+        else
+        {
+         //   ESP_LOGE(TAG, "ds18b20 device not responding");
+        }
+    }
+    return present;
+}
 
-	do
-	{
-		j = 8; // 8 bits
-		do
-		{
-			b = dread(); // read bit
-			ets_delay_us(1); //1us between read slots
+static bool _check_resolution(DS18B20_RESOLUTION resolution)
+{
+    return (resolution >= DS18B20_RESOLUTION_9_BIT) && (resolution <= DS18B20_RESOLUTION_12_BIT);
+}
 
-			if( (dread()) )
-			{
-				if( b) // 11
-					return -2; // data error
-			} else
-			{
-				if( !b)
-				{ // 00 = 2 devices
-					if( diff > i || (( *id & 1) && diff != i))
-					{
-						b = 1; // now 1
-						next_diff = i; // next pass 0
-					}
-				}
-			}
-			dsend( b); // write bit
-			*id >>= 1;
-			if( b)
-				*id |= 0x80; // store bit
+static float _wait_for_conversion(DS18B20_RESOLUTION resolution)
+{
+    float elapsed_time = 0.0f;
+    if (_check_resolution(resolution))
+    {
+        int divisor = 1 << (DS18B20_RESOLUTION_12_BIT - resolution);
+        ESP_LOGD(TAG, "divisor %d", divisor);
+        float max_conversion_time = (float)T_CONV / (float)divisor;
+        int ticks = ceil(max_conversion_time / portTICK_PERIOD_MS);
+        ESP_LOGD(TAG, "wait for conversion: %.3f ms, %d ticks", max_conversion_time, ticks);
 
-			i--;
+        // wait at least this maximum conversion time
+        vTaskDelay(ticks);
 
-		} while( --j);
+        // TODO: measure elapsed time more accurately
+        elapsed_time = ticks * portTICK_PERIOD_MS;
+    }
+    return elapsed_time;
+}
 
-		id++; // next byte
+static float _decode_temp(uint8_t lsb, uint8_t msb, DS18B20_RESOLUTION resolution)
+{
+    float result = 0.0f;
+    if (_check_resolution(resolution))
+    {
+        // masks to remove undefined bits from result
+        static const uint8_t lsb_mask[4] = { ~0x07, ~0x03, ~0x01, ~0x00 };
+        uint8_t lsb_masked = lsb_mask[resolution - DS18B20_RESOLUTION_9_BIT] & lsb;
+        int16_t raw = (msb << 8) | lsb_masked;
+        result = raw / 16.0f;
+    }
+    else
+    {
+        ESP_LOGE(TAG, "Unsupported resolution %d", resolution);
+    }
+    return result;
+}
 
-	} while( i);
+static size_t _min(size_t x, size_t y)
+{
+    return x > y ? y : x;
+}
 
-	return next_diff; // to continue search
+static Scratchpad _read_scratchpad(const DS18B20_Info * ds18b20_info, size_t count)
+{
+    count = _min(sizeof(Scratchpad), count);   // avoid overflow
+    Scratchpad scratchpad = {0};
+    ESP_LOGD(TAG, "scratchpad read %d bytes: ", count);
+    if (_address_device(ds18b20_info))
+    {
+        owb_write_byte(ds18b20_info->bus, DS18B20_FUNCTION_SCRATCHPAD_READ);
+        owb_read_bytes(ds18b20_info->bus, (uint8_t *)&scratchpad, count);
+        //esp_log_buffer_hex(TAG, &scratchpad, count);
+    }
+    return scratchpad;
+}
+
+static bool _write_scratchpad(const DS18B20_Info * ds18b20_info, const Scratchpad * scratchpad, bool verify)
+{
+    bool result = false;
+    // Only bytes 2, 3 and 4 (trigger and configuration) can be written.
+    // All three bytes MUST be written before the next reset to avoid corruption.
+    if (_is_init(ds18b20_info))
+    {
+        if (_address_device(ds18b20_info))
+        {
+            owb_write_byte(ds18b20_info->bus, DS18B20_FUNCTION_SCRATCHPAD_WRITE);
+            owb_write_bytes(ds18b20_info->bus, (uint8_t *)&scratchpad->trigger_high, 3);
+            ESP_LOGD(TAG, "scratchpad write 3 bytes:");
+            //esp_log_buffer_hex(TAG, &scratchpad->trigger_high, 3);
+            result = true;
+
+            if (verify)
+            {
+                Scratchpad read = _read_scratchpad(ds18b20_info, offsetof(Scratchpad, configuration) + 1);
+                if (memcmp(&scratchpad->trigger_high, &read.trigger_high, 3) != 0)
+                {
+                    ESP_LOGE(TAG, "scratchpad verify failed: "
+                            "wrote {0x%02x, 0x%02x, 0x%02x}, "
+                            "read {0x%02x, 0x%02x, 0x%02x}",
+                            scratchpad->trigger_high, scratchpad->trigger_low, scratchpad->configuration,
+                            read.trigger_high, read.trigger_low, read.configuration);
+                    result = false;
+                }
+            }
+        }
+    }
+    return result;
 }
 
 
-int DS_init(int GPIO, resol resolution, uint8_t *sensors){
+// Public API
 
-	//DS18B20 with default wtime ms per reading.
-	// so no setup of conversion time
-	DS_GPIO = GPIO;
-	gpio_pad_select_gpio(DS_GPIO);
-	init=true;
-	uint8_t aqui[8],son=0;
+DS18B20_Info * ds18b20_malloc(void)
+{
+    DS18B20_Info * ds18b20_info = malloc(sizeof(*ds18b20_info));
+    if (ds18b20_info != NULL)
+    {
+        memset(ds18b20_info, 0, sizeof(*ds18b20_info));
+        ESP_LOGD(TAG, "malloc %p", ds18b20_info);
+    }
+    else
+    {
+        ESP_LOGE(TAG, "malloc failed");
+    }
 
-	switch (resolution)
-	{
-	case bit9: //9 bit
-		wtime=100;//in ms
-		param=0x1f;
-		break;
-	case bit10: //10 bit
-		wtime=195;
-		param=0x3f;
-		break;
-	case bit11: // 11 bit
-		wtime=380;
-		param=0x5f;
-		break;
-	case bit12://default 12bit resolution
-	default:
-		wtime=750;
-		param=0x7f;
-	}
-	//Set resolution
-	if(RST_PULSE())
-	{
-		dsend_byte(WRITESCR);
-		dsend_byte(0); //temp =0
-		dsend_byte(0); //temp =0
-		dsend_byte(param);
-		int nextt=0xff;
-
-
-			while(1)
-			{
-			//	vTaskDelay(100 /  portTICK_RATE_MS);
-				int ret=romsearch(nextt,aqui);
-				if (ret>=0)
-				{
-				//	printf("Pos %d ",son++);
-				//	for (int a=0;a<8;a++)
-					//	printf("%02x",*(aqui+a));
-				//	printf("\nNext:%d\n",ret);
-					memcpy((sensors+son*8),aqui,8);
-					son++;
-					nextt=ret;
-					if(ret==0)
-						break;
-				}
-				else
-				{
-					printf("Rom error %d\n",ret);
-					break;
-				}
-			}
-
-//		printf("fueron %d \n",son);
-//		RST_PULSE();
-//		dsend_byte(READROM);
-//		for (int a=0;a<8;a++)
-//			romid[a]=dread_byte();
-//		printf("Family 0x%02x Rom Id ",romid[0]);
-//		for (int a=0;a<8;a++)
-//			printf("%02x",romid[a]);
-//		printf("\n");
-
-
-
-	}
-	else
-		printf("Could not configure DS18b20 resolution. Defaults presumed\n");
-	return son;
+    return ds18b20_info;
 }
 
-/// Sends one bit to bus
-void dsend(char bit){
-	gpio_set_level(DS_GPIO,0);
-	ets_delay_us(10); //we have 15us to do it. Use 10us
-	if(bit)
-		gpio_set_level(DS_GPIO,1);
-	//its a Zero leave it down for the time slot
-	ets_delay_us(50); //10+50 =60 minimum write slot
-	gpio_set_level(DS_GPIO,1);
+void ds18b20_free(DS18B20_Info ** ds18b20_info)
+{
+    if (ds18b20_info != NULL && (*ds18b20_info != NULL))
+    {
+        ESP_LOGD(TAG, "free %p", *ds18b20_info);
+        free(*ds18b20_info);
+        *ds18b20_info = NULL;
+    }
 }
-// Reads one bit from bus
-unsigned char dread(void){
-	uint8_t PRESENCE=0;//,p2=0;
-	//Line LOW, wait 1 us, High
-	gpio_set_level(DS_GPIO,0);
-	ets_delay_us(1);
-	gpio_set_level(DS_GPIO,1);
 
-	gpio_set_direction(DS_GPIO, GPIO_MODE_INPUT);
-	//read midway the reading slot 15us
-	ets_delay_us(8);
-	PRESENCE=gpio_get_level(DS_GPIO);
-	ets_delay_us(51); //1+8+51=60 minimum read slot time
-	gpio_set_direction(DS_GPIO, GPIO_MODE_OUTPUT);
-	return(PRESENCE);
+void ds18b20_init(DS18B20_Info * ds18b20_info, const OneWireBus * bus, OneWireBus_ROMCode rom_code)
+{
+    if (ds18b20_info != NULL)
+    {
+        _init(ds18b20_info, bus);
+        ds18b20_info->rom_code = rom_code;
+
+        // read current resolution from device as it may not be power-on or factory default
+        ds18b20_info->resolution = ds18b20_read_resolution(ds18b20_info);
+    }
+    else
+    {
+        ESP_LOGE(TAG, "ds18b20_info is NULL");
+    }
 }
-// Sends one byte to bus
-void dsend_byte(char data){
-	//	gpio_set_direction(DS_GPIO, GPIO_MODE_OUTPUT);
-	//	gpio_set_direction(16, GPIO_MODE_OUTPUT);
 
-	for(int i=0;i<8;i++)
-	{
-		dsend((data>>i)&1);
-		if(i<7)
-			ets_delay_us(1); //Delay between write slots
+void ds18b20_init_solo(DS18B20_Info * ds18b20_info, const OneWireBus * bus)
+{
+    if (ds18b20_info != NULL)
+    {
+        _init(ds18b20_info, bus);
+        ds18b20_info->solo = true;
+        // ROM code not required
 
-	}
+        // read current resolution from device as it may not be power-on or factory default
+        ds18b20_info->resolution = ds18b20_read_resolution(ds18b20_info);
+    }
+    else
+    {
+        ESP_LOGE(TAG, "ds18b20_info is NULL");
+    }
 }
-// Reads one byte from bus
-unsigned char dread_byte(void){
-	uint8_t data = 0;
-	for (int i=0;i<8;i++)
-	{
-		if(dread())
-			data|=0x01<<i;
-		ets_delay_us(1);
-	}
 
-	return(data);
+void ds18b20_use_crc(DS18B20_Info * ds18b20_info, bool use_crc)
+{
+    if (_is_init(ds18b20_info))
+    {
+        ds18b20_info->use_crc = use_crc;
+        ESP_LOGD(TAG, "use_crc %d", ds18b20_info->use_crc);
+    }
 }
-// Sends reset pulse
-unsigned char RST_PULSE(void){
-	unsigned char PRESENCE;
-	gpio_set_direction(DS_GPIO, GPIO_MODE_OUTPUT);
-	gpio_set_level(DS_GPIO,0);
-	ets_delay_us(480);
-	gpio_set_level(DS_GPIO,1);
-	gpio_set_direction(DS_GPIO, GPIO_MODE_INPUT);
-	ets_delay_us(30);//give the pull up resistor time to work
-	PRESENCE=!gpio_get_level(DS_GPIO);//0 = presence
-	ets_delay_us(450);
-	gpio_set_direction(DS_GPIO, GPIO_MODE_OUTPUT);
-	return PRESENCE;
-}
-// Returns temperature from sensor
-float DS_get_temp(uint8_t* romid) {
-	if(init==1){
-		unsigned char check;
-		char temp1=0, temp2=0;
-		check=RST_PULSE();
-		if(check==1)
-		{
-			if(romid==NULL)
-			{
-				dsend_byte(SKIPROM);
-				dsend_byte(CONVERT);
-			}
-			else
-			{
-				dsend_byte(MATCHROM);
-				for (int a=0;a<8;a++)
-					dsend_byte(*(romid+a));
-				dsend_byte(CONVERT);
-			}
-			vTaskDelay(wtime / portTICK_RATE_MS);
-			check=RST_PULSE();
-			if(romid==NULL)
-			{
-				dsend_byte(SKIPROM);
-				dsend_byte(READSCR);
-			}
-			else
-			{
-				dsend_byte(MATCHROM);
-				for (int a=0;a<8;a++)
-					dsend_byte(*(romid+a));
-				dsend_byte(READSCR);
-			}
-			temp1=dread_byte();
-			temp2=dread_byte();
-			check=RST_PULSE();
-			float temp=0;
-			temp=(float)(temp1+(temp2*256))/16;
-			return temp;
 
-		}
-		else{return 0;}
+bool ds18b20_set_resolution(DS18B20_Info * ds18b20_info, DS18B20_RESOLUTION resolution)
+{
+    bool result = false;
+    if (_is_init(ds18b20_info))
+    {
+        if (_check_resolution(ds18b20_info->resolution))
+        {
+            // read scratchpad up to and including configuration register
+            Scratchpad scratchpad = _read_scratchpad(ds18b20_info,
+                    offsetof(Scratchpad, configuration) - offsetof(Scratchpad, temperature) + 1);
 
-	}
-	else{return 0;}
+            // modify configuration register to set resolution
+            uint8_t value = (((resolution - 1) & 0x03) << 5) | 0x1f;
+            scratchpad.configuration = value;
+            ESP_LOGD(TAG, "configuration value 0x%02x", value);
+
+            // write bytes 2, 3 and 4 of scratchpad
+            result = _write_scratchpad(ds18b20_info, &scratchpad, /* verify */ true);
+            if (result)
+            {
+                ds18b20_info->resolution = resolution;
+                ESP_LOGD(TAG, "Resolution set to %d bits", (int)resolution);
+            }
+            else
+            {
+                // Resolution change failed - update the info resolution with the value read from configuration
+                ds18b20_info->resolution = ds18b20_read_resolution(ds18b20_info);
+                ESP_LOGW(TAG, "Resolution consistency lost - refreshed from device: %d", ds18b20_info->resolution);
+            }
+        }
+        else
+        {
+            ESP_LOGE(TAG, "Unsupported resolution %d", resolution);
+        }
+    }
+    return result;
 }
+
+DS18B20_RESOLUTION ds18b20_read_resolution(DS18B20_Info * ds18b20_info)
+{
+    DS18B20_RESOLUTION resolution = DS18B20_RESOLUTION_INVALID;
+    if (_is_init(ds18b20_info))
+    {
+        // read scratchpad up to and including configuration register
+        Scratchpad scratchpad = _read_scratchpad(ds18b20_info,
+                offsetof(Scratchpad, configuration) - offsetof(Scratchpad, temperature) + 1);
+
+        resolution = ((scratchpad.configuration >> 5) & 0x03) + DS18B20_RESOLUTION_9_BIT;
+        if (!_check_resolution(resolution))
+        {
+            ESP_LOGE(TAG, "invalid resolution read from device: 0x%02x", scratchpad.configuration);
+            resolution = DS18B20_RESOLUTION_INVALID;
+        }
+        else
+        {
+            ESP_LOGD(TAG, "Resolution read as %d", resolution);
+        }
+    }
+    return resolution;
+}
+
+bool ds18b20_convert(const DS18B20_Info * ds18b20_info)
+{
+    bool result = false;
+    if (_is_init(ds18b20_info))
+    {
+        const OneWireBus * bus = ds18b20_info->bus;
+        if (_address_device(ds18b20_info))
+        {
+            // initiate a temperature measurement
+            owb_write_byte(bus, DS18B20_FUNCTION_TEMP_CONVERT);
+            result = true;
+        }
+        else
+        {
+            ESP_LOGE(TAG, "ds18b20 device not responding");
+        }
+    }
+    return result;
+}
+
+void ds18b20_convert_all(const OneWireBus * bus)
+{
+    bool is_present = false;
+    owb_reset(bus, &is_present);
+    owb_write_byte(bus, OWB_ROM_SKIP);
+    owb_write_byte(bus, DS18B20_FUNCTION_TEMP_CONVERT);
+}
+
+float ds18b20_wait_for_conversion(const DS18B20_Info * ds18b20_info)
+{
+    float elapsed_time = 0.0f;
+    if (_is_init(ds18b20_info))
+    {
+        elapsed_time = _wait_for_conversion(ds18b20_info->resolution);
+    }
+    return elapsed_time;
+}
+
+DS18B20_ERROR ds18b20_read_temp(const DS18B20_Info * ds18b20_info, float * value)
+{
+    DS18B20_ERROR err = DS18B20_ERROR_UNKNOWN;
+    if (_is_init(ds18b20_info))
+    {
+        const OneWireBus * bus = ds18b20_info->bus;
+        if (_address_device(ds18b20_info))
+        {
+            // read measurement
+            if (owb_write_byte(bus, DS18B20_FUNCTION_SCRATCHPAD_READ) == OWB_STATUS_OK)
+            {
+                err = DS18B20_OK;
+
+                uint8_t temp_LSB = 0;
+                uint8_t temp_MSB = 0;
+                if (!ds18b20_info->use_crc)
+                {
+                    // Without CRC:
+                    owb_read_byte(bus, &temp_LSB);
+                    owb_read_byte(bus, &temp_MSB);
+                    bool is_present = false;
+                    owb_reset(bus, &is_present);  // terminate early
+                }
+                else
+                {
+                    // with CRC:
+                    uint8_t buffer[9] = {0};
+                    owb_read_bytes(bus, buffer, 9);
+
+                    temp_LSB = buffer[0];
+                    temp_MSB = buffer[1];
+
+                    if (owb_crc8_bytes(0, buffer, 9) != 0)
+                    {
+                        ESP_LOGE(TAG, "CRC failed");
+                        temp_LSB = 0x00;
+                        temp_MSB = 0x80;
+                        err = DS18B20_ERROR_CRC;
+                    }
+                }
+
+                if (err == DS18B20_OK)
+                {
+                    float temp = _decode_temp(temp_LSB, temp_MSB, ds18b20_info->resolution);
+                    ESP_LOGD(TAG, "temp_LSB 0x%02x, temp_MSB 0x%02x, temp %f", temp_LSB, temp_MSB, temp);
+
+                    if (value)
+                    {
+                        *value = temp;
+                    }
+                }
+            }
+            else
+            {
+                ESP_LOGE(TAG, "owb_write_byte failed");
+                err = DS18B20_ERROR_OWB;
+            }
+        }
+        else
+        {
+            ESP_LOGE(TAG, "ds18b20 device not responding");
+            err = DS18B20_ERROR_DEVICE;
+        }
+    }
+    return err;
+}
+
+DS18B20_ERROR ds18b20_convert_and_read_temp(const DS18B20_Info * ds18b20_info, float * value)
+{
+    DS18B20_ERROR err = DS18B20_ERROR_UNKNOWN;
+    if (_is_init(ds18b20_info))
+    {
+        if (ds18b20_convert(ds18b20_info))
+        {
+            // wait at least maximum conversion time
+            _wait_for_conversion(ds18b20_info->resolution);
+            if (value)
+            {
+                *value = 0.0f;
+                err = ds18b20_read_temp(ds18b20_info, value);
+            }
+            else
+            {
+                err = DS18B20_ERROR_NULL;
+            }
+        }
+    }
+    return err;
+}
+
+
