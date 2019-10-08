@@ -58,7 +58,7 @@ void set_tariff(void * pArg){
 	//printf("Load tariffs authorized. Start %d\n",addHTTP);
 	mils=millis();
 //	req = req_new("http://feediot.co.nf/tarifasDia.txt");
-	req = req_new("http://feediot.co.nf/tarifasPer.txt");
+	req = req_new("http://feediot.c1.biz/tarifasPer.txt");
 	req_setopt(req, REQ_SET_METHOD, "POST");
 	req_setopt(req, REQ_FUNC_DOWNLOAD_CB,download_callback);
 //	printf("Calling request\n");

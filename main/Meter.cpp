@@ -324,7 +324,10 @@ static void IRAM_ATTR gpio_isr_handler(void * arg)
 						meter->beatSaveRaw=0;
 					}
 
-					if(meter->beatSave>=(meter->beatsPerkW*diaTarifa[horag]/100))
+				//	if(meter->beatSave>=(meter->beatsPerkW))
+						if (diaTarifa[horag]==0)
+							diaTarifa[horag]=100;
+						if(meter->beatSave>=(meter->beatsPerkW*diaTarifa[horag]/100))
 					{ //One kWh has occurred
 						meter->saveit=true;
 						meter->beatSave=0;

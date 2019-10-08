@@ -282,17 +282,21 @@ void drawString(int x, int y, string que, int fsize, int align,displayType showi
 
 void drawBars()
 {
+	wifi_ap_record_t wifidata;
+
 	if (!connf)
 		return;
-	wifi_ap_record_t wifidata;
-	if (esp_wifi_sta_get_ap_info(&wifidata)==0){
-		//		printf("RSSI %d\n",wifidata.rssi);
+
+	if (esp_wifi_sta_get_ap_info(&wifidata)==0)
+	{
+		printf("RSSI %d\n",wifidata.rssi);
 		RSSI=80+wifidata.rssi;
 		if(oldRSSI==RSSI)
 			return;
 
 		oldRSSI=RSSI;
 	}
+
 	for (int a=0;a<3;a++)
 	{
 		if (RSSI>RSSIVAL)
@@ -301,9 +305,11 @@ void drawBars()
 			display.drawRect(barX[a],YB-barH[a],WB,barH[a]);
 		RSSI -= RSSIVAL;
 	}
+
 	if (mqttflag)
 		drawString(16, 5, string("m"), 10, TEXT_ALIGN_LEFT,NODISPLAY, NOREP);
 	display.display();
+
 }
 
 void setLogo(string cual)

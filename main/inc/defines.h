@@ -72,7 +72,7 @@
 #define ALERT_TYPE          			0
 #define ERROR_TYPE          			1
 #define MAXCHARS            			40
-#define VERSION             			"3.0.0" // May 7/2017 Version 1
+#define VERSION             			"3.0.0" // Oct 8/2019 Version 3
 #define NOALERT            				0
 #define NOMQTT              			1
 #define INITLOG             			2
