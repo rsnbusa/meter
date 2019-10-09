@@ -6,9 +6,6 @@
 #define MG_LISTEN_ADDR					"80"
 #define MG_TASK_STACK_SIZE 				4096 /* bytes */
 #define MGOS_TASK_PRIORITY 				1
-#define AP_SSID 						"taller"
-#define AP_PASS 						"csttpstt"
-#define AP_CHAN 						9
 #define BLINKT 							100
 #define BLINKPR 						100
 #define DSPIN 							26
@@ -22,21 +19,8 @@
 #define EXAMPLE_SERVER_PORT 			"80"
 #define EXAMPLE_FILENAME 				"http://feediot.co.nf/Meter32Git.bin"
 
-
-#define TIMER_INTR_SEL 					TIMER_INTR_LEVEL  /*!< Timer level interrupt */
-#define TIMER_GROUP    					TIMER_GROUP_0     /*!< Test on timer group 0 */
-#define TIMER_DIVIDER   				64               /*!< Hardware timer clock divider */
-#define TIMER_SCALE    					(TIMER_BASE_CLK / TIMER_DIVIDER)  /*!< used to calculate counter value */
-#define TIMER_FINE_ADJ   				(1.4*(TIMER_BASE_CLK / TIMER_DIVIDER)/1000000) /*!< used to compensate alarm value */
-#define TIMER_INTERVAL0_SEC   			(0.0000040)   /*!< test interval for timer 0 */
-#define TIMER_INTERVAL1_SEC   			(5.78)   /*!< test interval for timer 1 */
-#define TEST_WITHOUT_RELOAD   			0   /*!< example of auto-reload mode */
-#define TEST_WITH_RELOAD   				1      /*!< example without auto-reload mode */
-
 //#define RELEASE
 #define MQTTPORT                   		18747
-//#define MQTTSERVER		  			    "m11.cloudmqtt.com"
-
 // pins
 
 #define WATER							34
@@ -56,6 +40,7 @@
 #define RELAY3              			14      // Relay 3
 #define RELAY4              			27      // Relay 4
 
+//FRAM pins SPI
 #define FMOSI							23
 #define FMISO							19
 #define FCLK							18
@@ -67,7 +52,6 @@
 #define MAXEMAILS           			3
 #define CENTINEL            			0x12112299  //our chip id
 #define MAXLOSSPER          			10			//For saving beats BeatsKwH/this value. Ex 800 /10 =80 beats a save to fram
-#define TIMECHECK           			1000
 
 #define ALERT_TYPE          			0
 #define ERROR_TYPE          			1
@@ -111,13 +95,5 @@
 #define u32								uint32_t
 
 #define NKEYS							26
-
-#define DEFAULT_VREF   					1100
-#define SAMPLES  						64         //Multisampling
-#define ADCCHAN							ADC_CHANNEL_7;     //GPIO35 if ADC1
-#define ADC_COUNTS  					(1<<12)
-//#define CALIB							58.0
-
-#define MINBEAT							105
 
 #endif

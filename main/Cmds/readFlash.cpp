@@ -74,15 +74,6 @@ void show_config(u8 meter, bool full) // read flash and if HOW display Status me
 			nameStr=string(APP)+".bin";
 			printf("[Version OTA-Updater %s] ",aqui.actualVersion);
 			printf("[Firmware %s @ %s]\n",nameStr.c_str(),makeDateString(aqui.lastUpload).c_str());
-			if (aqui.ecount>0)
-			{
-				printf("Emails %d\n",aqui.ecount);
-				for (int a=0;a<aqui.ecount;a++)
-					if(a<MAXEMAILS) //Guard corruption
-						printf("%s @ %s {%s}\n",aqui.emailName[a],aqui.email[a],aqui.except[a]?"EXCEPTION":"ALWAYS");
-			}
-			//          printf("Accepted Ids %d\n",aqui.ucount);
-			//       print_log();
 		}
 
 		printf("[DispMgrTimer %d Resolution %d Beat@KwH %d Bounce %d]\n",aqui.DISPTIME,aqui.MODDISPLAY[meter],aqui.beatsPerKw[meter],aqui.bounce[meter]);

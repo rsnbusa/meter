@@ -289,7 +289,7 @@ void drawBars()
 
 	if (esp_wifi_sta_get_ap_info(&wifidata)==0)
 	{
-		printf("RSSI %d\n",wifidata.rssi);
+	//	printf("RSSI %d\n",wifidata.rssi);
 		RSSI=80+wifidata.rssi;
 		if(oldRSSI==RSSI)
 			return;
@@ -527,7 +527,9 @@ void displayData(u8 meter)
 	case DISPLAYKWH:
 		if(aqui.MODDISPLAY[meter]>100 || aqui.MODDISPLAY[meter]==0)
 			aqui.MODDISPLAY[meter]=5;
-		if(theMeters[meter].currentBeat-theMeters[meter].oldbeat>=aqui.MODDISPLAY[meter])
+
+		if(theMeters[meter].currentBeat %aqui.MODDISPLAY[meter]==0)
+		//	if(theMeters[meter].currentBeat-theMeters[meter].oldbeat>=aqui.MODDISPLAY[meter])
 		{
 			theMeters[meter].oldbeat=theMeters[meter].currentBeat;
 			sprintf(local,"%d",theMeters[meter].curLife);
@@ -538,7 +540,10 @@ void displayData(u8 meter)
 				sprintf(local," %4d",theMeters[meter].beatSave);
 				s1=string(local);
 				drawString(128, 0, s1, 10, TEXT_ALIGN_RIGHT,DISPLAYIT, REPLACE);
-				sprintf(local,"%s >> %d",meses[mesg+1],theMeters[meter].curMonth);
+				sprintf(local," %4d",aqui.beatsPerKw[meter]);
+				s1=string(local);
+				drawString(128, 12, s1, 10, TEXT_ALIGN_RIGHT,DISPLAYIT, REPLACE);
+				sprintf(local,"%s >> %d",meses[mesg],theMeters[meter].curMonth);
 				s1=string(local);
 				drawString(64, 48, s1, 16, TEXT_ALIGN_CENTER,DISPLAYIT, REPLACE);
 				s1="";
@@ -723,7 +728,7 @@ void displayManager(void *arg) {
 
 
 	while (true) {
-		if(aqui.pollGroup)
+		if(aqui.displayFlag)
 		{
 //			if(xSemaphoreTake(I2CSem, portMAX_DELAY)) //
 //			{

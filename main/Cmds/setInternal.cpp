@@ -15,6 +15,8 @@ extern void sendResponse(void* comm,int msgTipo,string que,int len,int errorcode
 extern void write_to_flash();
 extern void delay(uint16_t a);
 extern void postLog(int code, int code1, string mensaje);
+extern void write_to_fram(u8 meter,bool adding);
+
 
 void set_internal(void * pArg){
 	arg *argument=(arg*)pArg;
@@ -137,6 +139,7 @@ void set_internal(void * pArg){
 				xSemaphoreTake(framSem, portMAX_DELAY);//portMAX_DELAY
 				fram.write_minamps(meter,theMeters[meter].minamps);
 				fram.write_lifekwh(meter,aqui.bornKwh[meter]);
+				write_to_fram(meter,false);
 				xSemaphoreGive(framSem);
 				state=getParameter(argument,"serial");
 				if(state!="")

@@ -15,7 +15,6 @@ extern void postLog(int code, int code1,string que);
 extern  string makeDateString(time_t t);
 
 using namespace std;
-void initMeters();
 
 uint32_t IRAM_ATTR millis()
 {
@@ -417,7 +416,10 @@ void interruptTask(void* pvParameter)
 
 	gpio_install_isr_service(ESP_INTR_FLAG_IRAM);
 	for(int a=0;a<MAXDEVS;a++)
+	{
 		gpio_intr_disable(METERS[a]);
+	//	memset(&theMeters[a],0,sizeof(theMeters[a]));
+	}
 	for (int a=0;a<MAXDEVS;a++)
 	{
 		theMeters[a].meterid=a;
@@ -489,17 +491,6 @@ void read_flash()
 				printf("Error read %x largo %d aqui %d\n",q,largo,sizeof(aqui));
 	nvs_close(nvshandle);
 
-}
-
-uint32_t readADC()
-{
-	u32 adc_reading=0;
-
-    for (int i = 0; i < SAMPLES; i++)
-    	adc_reading += adc1_get_raw((adc1_channel_t)adcchannel);
-
-        adc_reading /= SAMPLES;
-	return adc_reading;
 }
 
 void write_to_flash() //save our configuration
@@ -849,7 +840,7 @@ void newSSID(void *pArg)
 
 
 esp_err_t wifi_event_handler(void *ctx, system_event_t *event) {
-	string local="Closed",temp;
+	string local="Closed",s1,temp;
 	u8 mac[8];
 	wifi_config_t config;
 //	int len;
@@ -870,7 +861,9 @@ esp_err_t wifi_event_handler(void *ctx, system_event_t *event) {
 		localIp=event->event_info.got_ip.ip_info.ip;
 		get_meter_name();
 
-		initMeters();
+		xTaskCreate(&interruptTask,"MeterISR",10240, NULL,(configMAX_PRIORITIES - 1),NULL); //Max Priority
+
+//		initMeters();
 
 #ifdef DEBUGMQQT
 		if(aqui.traceflag&(1<<BOOTD))
@@ -1052,11 +1045,7 @@ void initWiFi(void *pArg)
 	vTaskDelete(NULL);
 }
 
-void initMeters()
-{
-	string s1="meterX";
-	xTaskCreate(&interruptTask,"MeterISR",10240, NULL,(configMAX_PRIORITIES - 1),NULL); //Max Priority
-}
+
 
 void initScreen()
 {
@@ -1251,32 +1240,24 @@ void initVars()
 
 	string debugs;
 
+	// add - sign to Keys
 	for (int a=0;a<NKEYS/2;a++)
 	{
 		debugs="-"+string(lookuptable[a]);
 		strcpy(lookuptable[a+NKEYS/2],debugs.c_str());
 	}
 
-	//		// ADC setup will use ADC1 fixed Default VREF
-		    adc1_config_width(ADC_WIDTH_BIT_12);
-		    adcchannel=(adc1_channel_t)ADCCHAN;
-		    adc1_config_channel_atten(adcchannel, ADC_ATTEN_DB_11); //3300 mv is the target
+	gpio_config_t io_conf;
+	uint64_t mask=1;
 
-	//	    //Characterize ADC
-		//    adc_chars = (esp_adc_cal_characteristics_t*)calloc(1, sizeof(esp_adc_cal_characteristics_t));
-		 //   esp_adc_cal_value_t val_type = esp_adc_cal_characterize(ADC_UNIT_1, atten, ADC_WIDTH_BIT_12, DEFAULT_VREF, adc_chars);
-
-		    gpio_config_t io_conf;
-		    uint64_t mask=1;
-
-			io_conf.intr_type = GPIO_INTR_DISABLE;
-			io_conf.mode = GPIO_MODE_OUTPUT;
-			io_conf.pull_down_en =GPIO_PULLDOWN_DISABLE;
-			io_conf.pull_up_en =GPIO_PULLUP_DISABLE;
-			io_conf.pin_bit_mask = (mask<<WIFILED);
-			gpio_config(&io_conf);
-			io_conf.pin_bit_mask = (mask<<MQTTLED);
-			gpio_config(&io_conf);
+	io_conf.intr_type = GPIO_INTR_DISABLE;
+	io_conf.mode = GPIO_MODE_OUTPUT;
+	io_conf.pull_down_en =GPIO_PULLDOWN_DISABLE;
+	io_conf.pull_up_en =GPIO_PULLUP_DISABLE;
+	io_conf.pin_bit_mask = (mask<<WIFILED);
+	gpio_config(&io_conf);
+	io_conf.pin_bit_mask = (mask<<MQTTLED);
+	gpio_config(&io_conf);
 
 }
 
@@ -1476,50 +1457,25 @@ void init_temp()
 	  owb = owb_rmt_initialize(&rmt_driver_info, DSPIN, RMT_CHANNEL_1, RMT_CHANNEL_0);
 	  owb_use_crc(owb, true);  // enable CRC check for ROM code
 
-	     numsensors = 0;
-	       OneWireBus_ROMCode rom_code;
-	        owb_status status = owb_read_rom(owb, &rom_code);
-	        if (status == OWB_STATUS_OK)
-	        {
-	            char rom_code_s[OWB_ROM_CODE_STRING_LENGTH];
-	            owb_string_from_rom_code(rom_code, rom_code_s, sizeof(rom_code_s));
-	            printf("Single device %s present\n", rom_code_s);
-	            ds18b20_info = ds18b20_malloc();
-	            ds18b20_init_solo(ds18b20_info, owb);
-	            ds18b20_use_crc(ds18b20_info, true);           // enable CRC check for temperature readings
-	            ds18b20_set_resolution(ds18b20_info, DS18B20_RESOLUTION_12_BIT);
-	        }
-	        float tt=DS_get_temp(ds18b20_info);
-	        printf("Temp %.1f\n",tt);
-	        numsensors=1;
+	  numsensors = 0;
+	  OneWireBus_ROMCode rom_code;
+	  owb_status status = owb_read_rom(owb, &rom_code);
+	  if (status == OWB_STATUS_OK)
+	  {
+		char rom_code_s[OWB_ROM_CODE_STRING_LENGTH];
+		owb_string_from_rom_code(rom_code, rom_code_s, sizeof(rom_code_s));
+		printf("Single device %s present\n", rom_code_s);
+		ds18b20_info = ds18b20_malloc();
+		ds18b20_init_solo(ds18b20_info, owb);
+		ds18b20_use_crc(ds18b20_info, true);           // enable CRC check for temperature readings
+		ds18b20_set_resolution(ds18b20_info, DS18B20_RESOLUTION_12_BIT);
+	  }
+	  float tt=DS_get_temp(ds18b20_info);
+	  printf("Temp %.1f\n",tt);
+	  numsensors=1;
 
 
 }
-/*
-void init_temp()
-{
-	//Temp sensors
-	numsensors=DS_init(DSPIN,bit9,&sensors[0][0]);
-	if(numsensors==0)
-		numsensors=DS_init(DSPIN,bit9,&sensors[0][0]); //try again
-#ifdef DEBUGMQQT
-	if(aqui.traceflag & (1<<BOOTD))
-	{
-		printf("[BOOTD]There are %d sensors\n",numsensors);
-
-		for (int a=0;a<numsensors;a++)
-		{
-			printf("Sensor %d Id=",a);
-			for (int b=0;b<8;b++)
-				printf("%02x",sensors[a][b]);
-			delay(750);
-			printf(" Temp:%.02fC\n",DS_get_temp(&sensors[a][0]));
-		}
-	}
-#endif
-
-}
-*/
 
 void app_main(void)
 {
@@ -1540,12 +1496,13 @@ void app_main(void)
 	read_flash();
 
 	if (aqui.centinel!=CENTINEL || !gpio_get_level((gpio_num_t)0))
-		//	if (aqui.centinel!=CENTINEL )
 	{
 		printf("Read centinel %x",aqui.centinel);
 		erase_config();
 	}
+
     printf("Esp32-Meter\n");
+
     myMutex = portMUX_INITIALIZER_UNLOCKED;
 	initVars(); 			// used like this instead of var init to be able to have independent file per routine(s)
 	initI2C();  			// for Screen and RTC
@@ -1560,7 +1517,8 @@ void app_main(void)
 	aqui.bootcount++;
 	aqui.lastResetCode=rebootl;
 	write_to_flash();
-	displayf=aqui.pollGroup;
+
+	displayf=aqui.displayFlag;
 	// Start Main Tasks
 
 	xTaskCreate(&displayManager,"dispMgr",10240,NULL, MGOS_TASK_PRIORITY, NULL);		//Manages all display to LCD
@@ -1569,4 +1527,6 @@ void app_main(void)
 	xTaskCreate(&initWiFi,"log",10240,NULL, MGOS_TASK_PRIORITY, NULL);						// Log Manager
 
 	// Start Monitoring the Meter Lines
+
+
 }

@@ -109,6 +109,7 @@ void load_from_fram(u8 meter)
 		if(aqui.beatsPerKw[meter]==0)
 			aqui.beatsPerKw[meter]=800;// just in case div by 0 crash
 		u16 nada=theMeters[meter].currentBeat/aqui.beatsPerKw[meter];
+		printf("Beatsave Fram %d\n",theMeters[meter].beatSave);
 		theMeters[meter].beatSave=theMeters[meter].currentBeat-(nada*aqui.beatsPerKw[meter]);
 		theMeters[meter].beatSaveRaw=theMeters[meter].beatSave;
 		fram.read_minamps(meter,(u8*)&theMeters[meter].minamps);

@@ -92,46 +92,39 @@ typedef struct {
 } rawStatus;
 
 typedef struct  {
-    u32 centinel;
-    char ssid[5][MAXCHARS],pass[5][10],meterName[MAXCHARS];
-    u8 working;
-    time_t lastUpload;
-    char email [MAXEMAILS][MAXCHARS];
-    char emailName[MAXEMAILS][30];
-    u8 except[MAXEMAILS];
-    char mqtt[MAXCHARS];
-    char domain[MAXCHARS];
-    u16 ecount,ucount;
-    u16 bootcount;
-    time_t lastTime,preLastTime;
-    char actualVersion[20];
-    char groupName[MAXCHARS];
-    u16 DISPTIME;
-    u16 beatsPerKw[MAXDEVS];
-    char medidor_id[MAXDEVS][MAXCHARS];
-    u16 bounce[MAXDEVS];
-    u16 lastResetCode;
-    u16 MODDISPLAY[MAXDEVS];
-    u8 activeMeters;
-    u32 bornKwh[MAXDEVS];
-    time_t bornDate[MAXDEVS];
-    u16 diaDeCorte[MAXDEVS];
-    bool corteSent[MAXDEVS];
-    u8 breakers[MAXDEVS];
-    u16 mqttport;
-    char mqttUser[MAXCHARS];
-    char mqttPass[MAXCHARS];
-    u16 pollGroup;
-    u16 ssl;
-    u8 lastSSID;
-    u16 traceflag; // to make it mod 16 for AES encryption
-    u32 responses,cmdsIn;
+    u32 	centinel;
+    char 	ssid[5][MAXCHARS],pass[5][10],meterName[MAXCHARS];
+    u8 		working;
+    time_t 	lastUpload,lastTime,preLastTime,bornDate[MAXDEVS];
+    char 	mqtt[MAXCHARS];
+    char 	domain[MAXCHARS];
+    u16 	ucount;
+    u16 	bootcount;
+    char 	actualVersion[20];
+    char 	groupName[MAXCHARS];
+    u16 	DISPTIME;
+    u16 	beatsPerKw[MAXDEVS];
+    char 	medidor_id[MAXDEVS][MAXCHARS];
+    u16 	bounce[MAXDEVS];
+    u16 	lastResetCode;
+    u16 	MODDISPLAY[MAXDEVS];
+    u8 		activeMeters;
+    u32 	bornKwh[MAXDEVS];
+    u16 	diaDeCorte[MAXDEVS];
+    bool 	corteSent[MAXDEVS];
+    u8 		breakers[MAXDEVS];
+    u16 	mqttport;
+    char 	mqttUser[MAXCHARS];
+    char 	mqttPass[MAXCHARS];
+    u16 	displayFlag;
+    u16 	ssl;
+    u8 		lastSSID;
+    u16 	traceflag; // to make it mod 16 for AES encryption
+    u32 	responses,cmdsIn;
     displayModeType dispmode;
-    u8 lastMeter;
-    char serial[MAXDEVS][20];
+    u8 		lastMeter;
+    char 	serial[MAXDEVS][20];
 } config_flash;
-
-//typedef struct { char key[10]; int val; } t_symstruct;
 
 typedef void (*functrsn)(void *);
 

@@ -34,7 +34,7 @@ void set_settingsStatus(void * pArg){
 		}
 
 
-		sprintf(textl,"%d!%d!%d!%s!%d!%d!%d!%d!%d!%d!%d!%d!%s",cualmeter,(int)displayMode,aqui.pollGroup,aqui.medidor_id[cualmeter],aqui.bornKwh[cualmeter],
+		sprintf(textl,"%d!%d!%d!%s!%d!%d!%d!%d!%d!%d!%d!%d!%s",cualmeter,(int)displayMode,aqui.displayFlag,aqui.medidor_id[cualmeter],aqui.bornKwh[cualmeter],
 				mesg,diag,horag,aqui.MODDISPLAY[cualmeter],aqui.bounce[cualmeter],aqui.beatsPerKw[cualmeter],aqui.traceflag?1:0,aqui.serial[cualmeter]);
 		// chosenmeter,displaymode,display on/off,meterid[chosenmeter],born[meter], mesg,diag,horag, display resolution
 	}

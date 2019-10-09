@@ -71,7 +71,7 @@ void set_displayManager(void * pArg){
 	state=getParameter(argument,"st");
 		if(state!=""){
 			val=atoi(state.c_str());
-			aqui.pollGroup=val;
+			aqui.displayFlag=val;
 			displayf=val;
 			if(!val)
 				display.displayOff();
